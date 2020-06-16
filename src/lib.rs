@@ -26,8 +26,8 @@ extern "C" {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::ptr;
     use core::convert::TryInto;
+    use core::ptr;
 
     #[test]
     fn chacha20_poly1305_round_trip() {
