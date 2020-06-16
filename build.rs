@@ -70,7 +70,6 @@ fn gcc() {
 
     if arch == "x86_64" {
         new_build(base)
-            .flag("-march=haswell")
             .flag("-mavx")
             .flag("-mavx2")
             .files(vec256_sources)
