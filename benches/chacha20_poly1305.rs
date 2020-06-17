@@ -8,9 +8,9 @@ use test::{black_box, Bencher};
 
 #[bench]
 fn bench_chacha20_poly1305_encrypt(b: &mut Bencher) {
-    let k = [0u8; 32];
+    let mut k = [0u8; 32];
     let n = [0u8; 12];
-    let m = [0u8; 1400];
+    let mut m = [0u8; 1400];
     let mut c = [0u8; 1400];
     let mut tag = [0u8; 16];
 
@@ -22,12 +22,12 @@ fn bench_chacha20_poly1305_encrypt(b: &mut Bencher) {
 
     b.iter(|| unsafe {
         EverCrypt_Chacha20Poly1305_aead_encrypt(
-            k.as_ptr(),
-            black_box(n).as_ptr(),
+            k.as_mut_ptr(),
+            black_box(n).as_mut_ptr(),
             0,
-            ptr::null(),
+            ptr::null_mut(),
             m.len().try_into().unwrap(),
-            m.as_ptr(),
+            m.as_mut_ptr(),
             c.as_mut_ptr(),
             tag.as_mut_ptr(),
         );
