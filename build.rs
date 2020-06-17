@@ -1,7 +1,7 @@
 #![allow(non_upper_case_globals)]
 
-use std::path::{Path, PathBuf};
 use std::io::Write;
+use std::path::{Path, PathBuf};
 
 static vec256_sources: &[&str] = &[
     "Hacl_Chacha20_Vec256.c",
@@ -9,12 +9,28 @@ static vec256_sources: &[&str] = &[
     "Hacl_Chacha20Poly1305_256.c",
     "Hacl_Poly1305_256.c",
     "Hacl_Curve25519_64.c",
+    "Hacl_Blake2b_256.c",
+    "Hacl_Streaming_SHA2_256.c",
+    "Hacl_HPKE_Curve51_CP256_SHA256.c",
+    "Hacl_HPKE_Curve51_CP256_SHA512.c",
+    "Hacl_HPKE_Curve64_CP128_SHA256.c",
+    "Hacl_HPKE_Curve64_CP128_SHA512.c",
+    "Hacl_HPKE_Curve64_CP256_SHA256.c",
+    "Hacl_HPKE_Curve64_CP256_SHA512.c",
+    "Hacl_HPKE_Curve64_CP32_SHA256.c",
+    "Hacl_HPKE_Curve64_CP32_SHA512.c",
+    "Hacl_HPKE_P256_CP256_SHA256.c",
 ];
 
 static vec128_sources: &[&str] = &[
+    // This is broken on aarch64...
+    // "Hacl_Blake2s_128.c",
     "Hacl_Poly1305_128.c",
     "Hacl_Chacha20Poly1305_128.c",
     "Hacl_Chacha20_Vec128.c",
+    "Hacl_HPKE_Curve51_CP128_SHA256.c",
+    "Hacl_HPKE_Curve51_CP128_SHA512.c",
+    "Hacl_HPKE_P256_CP128_SHA256.c",
 ];
 
 static x86_64_linux_asm_sources: &[&str] = &[
@@ -59,48 +75,93 @@ static x86_64_msvc_asm_sources: &[&str] = &[
 
 static i686_msvc_asm_sources: &[&str] = &["aes-i686.asm"];
 
-static evercrypt_sources: &[&str] = &[
-    "EverCrypt_Error.c",
-    "EverCrypt_Ed25519.c",
-    "EverCrypt_Vale.c",
-    "EverCrypt_DRBG.c",
+static c_sources: &[&str] = &[
     "EverCrypt_AEAD.c",
-    "EverCrypt_Chacha20Poly1305.c",
-    "EverCrypt_Curve25519.c",
     "EverCrypt_AutoConfig2.c",
-    "EverCrypt_HMAC.c",
+    "EverCrypt_Chacha20Poly1305.c",
+    "EverCrypt_Cipher.c",
+    "EverCrypt_CTR.c",
+    "EverCrypt_Curve25519.c",
+    "EverCrypt_DRBG.c",
+    "EverCrypt_Ed25519.c",
+    "EverCrypt_Error.c",
     "EverCrypt_Hash.c",
+    "EverCrypt_HKDF.c",
+    "EverCrypt_HMAC.c",
     "EverCrypt_Poly1305.c",
     "EverCrypt_StaticConfig.c",
-    // "evercrypt_vale_stubs.c",
-    "EverCrypt_HKDF.c",
+    "EverCrypt_Vale.c",
+    "evercrypt_vale_stubs.c",
+    "Hacl_AES.c",
+    "Hacl_Blake2b_32.c",
+    "Hacl_Blake2s_32.c",
+    "Hacl_Chacha20.c",
+    "Hacl_Chacha20Poly1305_32.c",
+    "Hacl_Chacha20_Vec32.c",
+    "Hacl_Curve25519_51.c",
+    "Hacl_ECDSA.c",
+    "Hacl_Ed25519.c",
+    "Hacl_Frodo_KEM.c",
+    "Hacl_Hash.c",
+    "Hacl_HKDF.c",
+    "Hacl_HMAC.c",
+    "Hacl_HMAC_DRBG.c",
+    "Hacl_HPKE_Curve51_CP32_SHA256.c",
+    "Hacl_HPKE_Curve51_CP32_SHA512.c",
+    "Hacl_HPKE_P256_CP32_SHA256.c",
+    "Hacl_Kremlib.c",
+    "Hacl_NaCl.c",
+    "Hacl_Poly1305_32.c",
+    "Hacl_Salsa20.c",
+    "Hacl_SHA3.c",
+    "Hacl_Spec.c",
+    "Hacl_Streaming_Poly1305_32.c",
+    "Lib_Memzero0.c",
+    "Lib_Memzero.c",
+    "Lib_PrintBuffer.c",
+    "Lib_RandomBuffer_System.c",
+    "MerkleTree.c",
+    "Vale.c",
 ];
 
-static hacl_sources: &[&str] = &[
-    "Hacl_Salsa20.c",
-    "Hacl_Hash.c",
-    "Lib_PrintBuffer.c",
-    "Lib_Memzero0.c",
-    "Hacl_Poly1305_32.c",
-    "Hacl_SHA3.c",
-    "MerkleTree.c",
-    "Hacl_Ed25519.c",
-    "Lib_Memzero.c",
-    "Hacl_NaCl.c",
-    "Lib_RandomBuffer_System.c",
-    "Vale.c",
-    "Hacl_HMAC.c",
-    "Hacl_Spec.c",
-    "Hacl_HMAC_DRBG.c",
-    "Hacl_Curve25519_51.c",
-    "Hacl_Frodo_KEM.c",
-    "Hacl_HKDF.c",
-    "Hacl_AES.c",
-    "Hacl_Chacha20Poly1305_32.c",
-    "Hacl_Kremlib.c",
-    "Hacl_Chacha20_Vec32.c",
-    "Hacl_Chacha20.c",
-];
+fn support_has_include() -> bool {
+    let out_dir = std::env::var_os("OUT_DIR").unwrap();
+    let path = Path::new(&out_dir).join("check_has_include.c");
+    std::fs::write(
+        &path,
+        &br#"#if __has_include("config.h")
+#endif
+"#[..],
+    )
+    .unwrap();
+    let result = cc::Build::new().file(&path).try_expand().is_ok();
+    std::fs::remove_file(path).unwrap();
+    result
+}
+
+fn support_explicit_bzero() -> bool {
+    let out_dir = std::env::var_os("OUT_DIR").unwrap();
+    let path = Path::new(&out_dir).join("check_explicit_bzero.c");
+    std::fs::write(
+        &path,
+        &br#"
+#include <string.h>
+
+void f(void *ptr, size_t len) {
+    explicit_bzero(ptr, len);
+}
+"#[..],
+    )
+    .unwrap();
+    let result = cc::Build::new()
+        .cargo_metadata(false)
+        .warnings_into_errors(true)
+        .file(&path)
+        .try_compile("check_explicit_bzero")
+        .is_ok();
+    std::fs::remove_file(path).unwrap();
+    result
+}
 
 fn main() {
     let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
@@ -150,11 +211,20 @@ fn main() {
         config_h.write_all(b"#define IS_ARM_7 1\n").unwrap();
     }
     if arch != "x86_64" {
-        // XXX: What's this for?
-        config_h.write_all(b"#define BROKEN_INTRINSICS 1\n").unwrap();
+        // I think this disables _addcarry_u64.
+        config_h
+            .write_all(b"#define BROKEN_INTRINSICS 1\n")
+            .unwrap();
         config_h.write_all(b"#define IS_NOT_X64 1\n").unwrap();
     }
-    config_h.write_all(b"#define LINUX_NO_EXPLICIT_BZERO 1").unwrap();
+    if os == "linux" && !support_explicit_bzero() {
+        println!("cargo:warning=**********************************");
+        println!("cargo:warning=It seems that explicit_bzero is not supported. Disabling.");
+        println!("cargo:warning=**********************************");
+        config_h
+            .write_all(b"#define LINUX_NO_EXPLICIT_BZERO 1")
+            .unwrap();
+    }
     config_h.flush().unwrap();
     drop(config_h);
 
@@ -164,9 +234,14 @@ fn main() {
         build.warnings(false);
         build.extra_warnings(false);
         build.include(out_dir);
-        // Some older compiler does not support __has_include. Hard code as 1.
-        // TODO: don't redefine it.
-        build.define("__has_include(x)", "1");
+        if !support_has_include() {
+            println!("cargo:warning=**********************************");
+            println!(
+                "cargo:warning=It seems that __has_include is not supported. Hard coding to 1."
+            );
+            println!("cargo:warning=**********************************");
+            build.define("__has_include(x)", "1");
+        }
         if target_pointer_width != "64" {
             build.define("KRML_VERIFIED_UINT128", None);
         }
@@ -218,7 +293,6 @@ fn main() {
 
     build_common
         .clone()
-        .files(map_sources(distro, evercrypt_sources))
-        .files(map_sources(distro, hacl_sources))
+        .files(map_sources(distro, c_sources))
         .compile("evercrypt");
 }
