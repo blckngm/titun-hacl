@@ -1,5 +1,8 @@
 #![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
 
+// Opaque type.
+pub type EverCrypt_Hash_state_s = u8;
+
 include!("bindings.rs");
 
 #[cfg(test)]
