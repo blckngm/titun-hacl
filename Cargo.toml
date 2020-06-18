@@ -1,5 +1,5 @@
 [package]
-name = "evercrypt"
+name = "evercrypt-sys"
 version = "0.1.0"
 authors = ["Yin Guanhao <sopium@mysterious.site>"]
 edition = "2018"

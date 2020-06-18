@@ -1,7 +1,7 @@
 #![feature(test)]
 extern crate test;
 
-use evercrypt::*;
+use evercrypt_sys::*;
 use std::convert::TryInto;
 use std::ptr;
 use test::{black_box, Bencher};
