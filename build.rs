@@ -24,7 +24,7 @@ static vec256_sources: &[&str] = &[
 
 static vec128_sources: &[&str] = &[
     // This is broken on aarch64...
-    // "Hacl_Blake2s_128.c",
+    "Hacl_Blake2s_128.c",
     "Hacl_Poly1305_128.c",
     "Hacl_Chacha20Poly1305_128.c",
     "Hacl_Chacha20_Vec128.c",
