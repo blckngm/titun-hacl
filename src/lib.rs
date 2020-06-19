@@ -94,4 +94,50 @@ mod tests {
             assert_ne!(r, 0);
         }
     }
+
+    #[test]
+    fn blake2s_vector() {
+        let input = b"abc";
+        let mut output = [0u8; 32];
+        let key: &[u8] = &[];
+
+        if cfg!(any(target_arch = "aarch64", target_arch = "x86-64")) {
+            unsafe {
+                Hacl_Blake2s_128_blake2s(
+                    output.len() as _,
+                    output.as_mut_ptr(),
+                    input.len() as _,
+                    input.as_ptr() as _,
+                    key.len() as _,
+                    key.as_ptr() as _,
+                );
+            }
+            assert_eq!(
+                output,
+                [
+                    0x50, 0x8C, 0x5E, 0x8C, 0x32, 0x7C, 0x14, 0xE2, 0xE1, 0xA7, 0x2B, 0xA3, 0x4E,
+                    0xEB, 0x45, 0x2F, 0x37, 0x45, 0x8B, 0x20, 0x9E, 0xD6, 0x3A, 0x29, 0x4D, 0x99,
+                    0x9B, 0x4C, 0x86, 0x67, 0x59, 0x82,
+                ]
+            );
+        }
+        unsafe {
+            Hacl_Blake2s_32_blake2s(
+                output.len() as _,
+                output.as_mut_ptr(),
+                input.len() as _,
+                input.as_ptr() as _,
+                key.len() as _,
+                key.as_ptr() as _,
+            );
+        }
+        assert_eq!(
+            output,
+            [
+                0x50, 0x8C, 0x5E, 0x8C, 0x32, 0x7C, 0x14, 0xE2, 0xE1, 0xA7, 0x2B, 0xA3, 0x4E, 0xEB,
+                0x45, 0x2F, 0x37, 0x45, 0x8B, 0x20, 0x9E, 0xD6, 0x3A, 0x29, 0x4D, 0x99, 0x9B, 0x4C,
+                0x86, 0x67, 0x59, 0x82,
+            ]
+        );
+    }
 }

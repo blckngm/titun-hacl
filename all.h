@@ -12,3 +12,7 @@
 #include <EverCrypt_HMAC.h>
 #include <EverCrypt_Poly1305.h>
 #include <EverCrypt_StaticConfig.h>
+#include <Hacl_Blake2b_256.h>
+#include <Hacl_Blake2b_32.h>
+#include <Hacl_Blake2s_128.h>
+#include <Hacl_Blake2s_32.h>

@@ -887,3 +887,43 @@ extern "C" {
 extern "C" {
     pub static mut EverCrypt_StaticConfig_bcrypt: bool;
 }
+extern "C" {
+    pub fn Hacl_Blake2b_32_blake2b(
+        nn: u32,
+        output: *mut u8,
+        ll: u32,
+        d: *mut u8,
+        kk: u32,
+        k: *mut u8,
+    );
+}
+extern "C" {
+    pub fn Hacl_Blake2b_256_blake2b(
+        nn: u32,
+        output: *mut u8,
+        ll: u32,
+        d: *mut u8,
+        kk: u32,
+        k: *mut u8,
+    );
+}
+extern "C" {
+    pub fn Hacl_Blake2s_128_blake2s(
+        nn: u32,
+        output: *mut u8,
+        ll: u32,
+        d: *mut u8,
+        kk: u32,
+        k: *mut u8,
+    );
+}
+extern "C" {
+    pub fn Hacl_Blake2s_32_blake2s(
+        nn: u32,
+        output: *mut u8,
+        ll: u32,
+        d: *mut u8,
+        kk: u32,
+        k: *mut u8,
+    );
+}
