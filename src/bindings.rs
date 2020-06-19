@@ -317,16 +317,6 @@ extern "C" {
 extern "C" {
     pub fn EverCrypt_AEAD_free(s: *mut EverCrypt_AEAD_state_s);
 }
-extern "C" {
-    pub fn EverCrypt_Cipher_chacha20(
-        len: u32,
-        dst: *mut u8,
-        src: *mut u8,
-        key: *mut u8,
-        iv: *mut u8,
-        ctr: u32,
-    );
-}
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct EverCrypt_CTR_state_s_s {
