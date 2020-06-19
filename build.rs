@@ -180,7 +180,7 @@ fn main() {
         distro: &'static str,
         sources: &'static [&'static str],
     ) -> impl Iterator<Item = PathBuf> {
-        sources.into_iter().map(move |s| Path::new(distro).join(s))
+        sources.iter().map(move |s| Path::new(distro).join(s))
     }
 
     let asm = match &*os {
@@ -291,6 +291,7 @@ fn main() {
             .compile("evercrypt_asm");
     }
 
+    #[allow(clippy::redundant_clone)]
     build_common
         .clone()
         .files(map_sources(distro, c_sources))
