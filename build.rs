@@ -5,21 +5,9 @@ use std::path::{Path, PathBuf};
 
 static vec256_sources: &[&str] = &[
     "Hacl_Chacha20_Vec256.c",
-    "Hacl_Curve25519_64_Slow.c",
     "Hacl_Chacha20Poly1305_256.c",
     "Hacl_Poly1305_256.c",
-    "Hacl_Curve25519_64.c",
     "Hacl_Blake2b_256.c",
-    "Hacl_Streaming_SHA2_256.c",
-    "Hacl_HPKE_Curve51_CP256_SHA256.c",
-    "Hacl_HPKE_Curve51_CP256_SHA512.c",
-    "Hacl_HPKE_Curve64_CP128_SHA256.c",
-    "Hacl_HPKE_Curve64_CP128_SHA512.c",
-    "Hacl_HPKE_Curve64_CP256_SHA256.c",
-    "Hacl_HPKE_Curve64_CP256_SHA512.c",
-    "Hacl_HPKE_Curve64_CP32_SHA256.c",
-    "Hacl_HPKE_Curve64_CP32_SHA512.c",
-    "Hacl_HPKE_P256_CP256_SHA256.c",
 ];
 
 static vec128_sources: &[&str] = &[
@@ -27,9 +15,6 @@ static vec128_sources: &[&str] = &[
     "Hacl_Poly1305_128.c",
     "Hacl_Chacha20Poly1305_128.c",
     "Hacl_Chacha20_Vec128.c",
-    "Hacl_HPKE_Curve51_CP128_SHA256.c",
-    "Hacl_HPKE_Curve51_CP128_SHA512.c",
-    "Hacl_HPKE_P256_CP128_SHA256.c",
 ];
 
 static x86_64_linux_asm_sources: &[&str] = &[
@@ -73,6 +58,8 @@ static x86_64_msvc_asm_sources: &[&str] = &[
 ];
 
 static i686_msvc_asm_sources: &[&str] = &["aes-i686.asm"];
+
+static x86_64_c_sources: &[&str] = &["Hacl_Curve25519_64.c"];
 
 static c_sources: &[&str] = &[
     "EverCrypt_AEAD.c",
@@ -119,6 +106,20 @@ static c_sources: &[&str] = &[
     "Lib_RandomBuffer_System.c",
     "MerkleTree.c",
     "Vale.c",
+    "Hacl_Curve25519_64_Slow.c",
+    "Hacl_Streaming_SHA2_256.c",
+    "Hacl_HPKE_Curve51_CP256_SHA256.c",
+    "Hacl_HPKE_Curve51_CP256_SHA512.c",
+    "Hacl_HPKE_Curve64_CP128_SHA256.c",
+    "Hacl_HPKE_Curve64_CP128_SHA512.c",
+    "Hacl_HPKE_Curve64_CP256_SHA256.c",
+    "Hacl_HPKE_Curve64_CP256_SHA512.c",
+    "Hacl_HPKE_Curve64_CP32_SHA256.c",
+    "Hacl_HPKE_Curve64_CP32_SHA512.c",
+    "Hacl_HPKE_P256_CP256_SHA256.c",
+    "Hacl_HPKE_Curve51_CP128_SHA256.c",
+    "Hacl_HPKE_Curve51_CP128_SHA512.c",
+    "Hacl_HPKE_P256_CP128_SHA256.c",
 ];
 
 fn support_has_include() -> bool {
@@ -302,5 +303,13 @@ fn main() {
     build_common
         .clone()
         .files(map_sources(distro, c_sources))
+        .files(map_sources(
+            distro,
+            if arch == "x86_64" {
+                x86_64_c_sources
+            } else {
+                &[]
+            },
+        ))
         .compile("evercrypt");
 }
