@@ -122,21 +122,6 @@ static c_sources: &[&str] = &[
     "Hacl_HPKE_P256_CP128_SHA256.c",
 ];
 
-fn support_has_include() -> bool {
-    let out_dir = std::env::var_os("OUT_DIR").unwrap();
-    let path = Path::new(&out_dir).join("check_has_include.c");
-    std::fs::write(
-        &path,
-        &br#"#if __has_include("config.h")
-#endif
-"#[..],
-    )
-    .unwrap();
-    let result = cc::Build::new().file(&path).try_expand().is_ok();
-    std::fs::remove_file(path).unwrap();
-    result
-}
-
 fn support_explicit_bzero() -> bool {
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
     let path = Path::new(&out_dir).join("check_explicit_bzero.c");
@@ -233,23 +218,18 @@ fn main() {
         build.warnings(false);
         build.extra_warnings(false);
         build.include(out_dir);
-        if !support_has_include() {
-            println!("cargo:warning=**********************************");
-            println!(
-                "cargo:warning=It seems that __has_include is not supported. Hard coding to 1."
-            );
-            println!("cargo:warning=**********************************");
-            build.define("__has_include(x)", "1");
-        }
         if target_pointer_width != "64" {
             build.define("KRML_VERIFIED_UINT128", None);
         }
-        if arch == "aarch64" || arch == "arm" {
-            build.define("Lib_IntVector_Intrinsics_vec256", "void *");
-        }
-        if arch == "x86" {
-            build.define("Lib_IntVector_Intrinsics_vec256", "void *");
-            build.define("Lib_IntVector_Intrinsics_vec128", "void *");
+        match &*arch {
+            "x86_64" => {}
+            "aarch64" => {
+                build.define("Lib_IntVector_Intrinsics_vec256", "void *");
+            }
+            _ => {
+                build.define("Lib_IntVector_Intrinsics_vec256", "void *");
+                build.define("Lib_IntVector_Intrinsics_vec128", "void *");
+            }
         }
         if arch == "arm" {
             // libintvector.h is including arm_nean.h unconditionally. Need this
