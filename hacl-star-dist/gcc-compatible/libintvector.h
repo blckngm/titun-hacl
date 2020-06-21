@@ -478,14 +478,14 @@ typedef uint32x4_t Lib_IntVector_Intrinsics_vec128;
 
 #define Lib_IntVector_Intrinsics_vec128_rotate_left32(x0,x1)	\
   (((x1) == 16? Lib_IntVector_Intrinsics_vec128_rotate_left32_16(x0) : \
-                vorrq_u32(vshlq_n_u32((x0),(x1)),vshrq_n_u32((x0),32-(x1)))))
+                vsriq_n_u32(vshlq_n_u32((x0),(x1)),(x0),32-(x1))))
 
 #define Lib_IntVector_Intrinsics_vec128_rotate_right32_16(x1)	\
   (vreinterpretq_u32_u16(vrev32q_u16(vreinterpretq_u16_u32(x1))))
 
 #define Lib_IntVector_Intrinsics_vec128_rotate_right32(x0,x1)	\
   (((x1) == 16? Lib_IntVector_Intrinsics_vec128_rotate_right32_16(x0) : \
-                vorrq_u32(vshlq_n_u32((x0),32-(x1)),vshrq_n_u32((x0),(x1)))))
+                vsriq_n_u32(vshlq_n_u32((x0),32-(x1)),(x0),(x1))))
 
 #define Lib_IntVector_Intrinsics_vec128_rotate_right_lanes32(x0, x1)	\
   (vextq_u32(x0,x0,x1))

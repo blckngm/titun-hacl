@@ -23,7 +23,6 @@ static vec256_sources: &[&str] = &[
 ];
 
 static vec128_sources: &[&str] = &[
-    // This is broken on aarch64...
     "Hacl_Blake2s_128.c",
     "Hacl_Poly1305_128.c",
     "Hacl_Chacha20Poly1305_128.c",
@@ -167,6 +166,7 @@ fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
     let target_pointer_width = std::env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap();
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
+    let opt_level = std::env::var("OPT_LEVEL").unwrap();
 
     let distro = if env == "msvc" {
         "hacl-star-dist/msvc-compatible"
@@ -273,11 +273,20 @@ fn main() {
     }
 
     if build_vec128 {
-        build_common
-            .clone()
+        let mut build = build_common.clone();
+        build
             .flag_if_supported("/arch:AVX")
             .flag_if_supported("-mavx")
-            .flag_if_supported("-march=armv8-a+simd")
+            .flag_if_supported("-march=armv8-a+simd");
+
+        if arch == "aarch64" && opt_level == "0" {
+            // Use at least O1, otherwise blake2s won't build on aarch64,
+            // because the compiler can't deduce that the arguments we pass to
+            // vsriq_n_u32 are actually constants.
+            build.opt_level(1);
+        }
+
+        build
             .files(map_sources(distro, vec128_sources))
             .compile("evercrypt_vec128");
     }
