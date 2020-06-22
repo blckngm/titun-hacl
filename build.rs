@@ -254,11 +254,12 @@ fn main() {
     }
 
     if !asm_sources.is_empty() {
-        build_common
-            .clone()
-            .flag_if_supported("/nologo")
-            .files(map_sources(distro, asm_sources))
-            .compile("evercrypt_asm");
+        let mut build = build_common.clone();
+        if env == "msvc" {
+            build.flag("/nologo");
+        }
+        build.files(map_sources(distro, asm_sources));
+        build.compile("evercrypt_asm");
     }
 
     #[allow(clippy::redundant_clone)]
