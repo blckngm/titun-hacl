@@ -232,7 +232,7 @@ fn main() {
         }
         match &*arch {
             "x86_64" => {}
-            "aarch64" => {
+            "aarch64" | "arm" => {
                 build.define("Lib_IntVector_Intrinsics_vec256", "void *");
             }
             _ => {
