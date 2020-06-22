@@ -201,6 +201,9 @@ fn main() {
             .unwrap();
         config_h.write_all(b"#define IS_NOT_X64 1\n").unwrap();
     }
+    if arch == "x86" && env == "msvc" {
+        config_h.write_all(b"#include <malloc.h>\n").unwrap();
+    }
     if os == "linux" && !support_explicit_bzero() {
         println!("cargo:warning=**********************************");
         println!("cargo:warning=It seems that explicit_bzero is not supported. Disabling.");
@@ -211,6 +214,12 @@ fn main() {
     }
     config_h.flush().unwrap();
     drop(config_h);
+    // Generate a fake x86intrin.h for MSVC.
+    if env == "msvc" {
+        let mut x86intrin_h =
+            std::fs::File::create(Path::new(&out_dir).join("x86intrin.h")).unwrap();
+        x86intrin_h.write_all(b"#include <immintrin.h>").unwrap();
+    }
 
     let build_common = {
         let mut build = cc::Build::new();
