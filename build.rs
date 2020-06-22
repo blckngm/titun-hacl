@@ -254,10 +254,9 @@ fn main() {
     if build_vec256 {
         build_common
             .clone()
-            .flag_if_supported("/arch:AVX")
             .flag_if_supported("/arch:AVX2")
-            .flag_if_supported("-mavx")
             .flag_if_supported("-mavx2")
+            .flag_if_supported("-mtune=skylake")
             .files(map_sources(distro, vec256_sources))
             .compile("evercrypt_vec256");
     }
@@ -267,6 +266,9 @@ fn main() {
         build
             .flag_if_supported("/arch:AVX")
             .flag_if_supported("-mavx")
+            // IVB is the last generation of Intel CPUs that supports AVX but
+            // not AVX2.
+            .flag_if_supported("-mtune=ivybridge")
             .flag_if_supported("-march=armv8-a+simd");
 
         if arch == "aarch64" && opt_level == "0" {
