@@ -5,6 +5,12 @@ pub type EverCrypt_Hash_state_s = u8;
 
 include!("bindings.rs");
 
+#[cfg(target_os = "linux")]
+#[no_mangle]
+unsafe fn Lib_Memzero0_memzero(ptr: *mut u8, size: u64) {
+    core::ptr::write_bytes(ptr, 0, size as usize);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

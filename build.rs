@@ -61,6 +61,9 @@ static i686_msvc_asm_sources: &[&str] = &["aes-i686.asm"];
 
 static x86_64_c_sources: &[&str] = &["Hacl_Curve25519_64.c"];
 
+// Don't use explicit_bzero on linux.
+static non_linux_c_sources: &[&str] = &["Lib_Memzero0.c"];
+
 static c_sources: &[&str] = &[
     "EverCrypt_AEAD.c",
     "EverCrypt_AutoConfig2.c",
@@ -100,7 +103,6 @@ static c_sources: &[&str] = &[
     "Hacl_SHA3.c",
     "Hacl_Spec.c",
     "Hacl_Streaming_Poly1305_32.c",
-    "Lib_Memzero0.c",
     "Lib_Memzero.c",
     "Lib_PrintBuffer.c",
     "Lib_RandomBuffer_System.c",
@@ -121,30 +123,6 @@ static c_sources: &[&str] = &[
     "Hacl_HPKE_Curve51_CP128_SHA512.c",
     "Hacl_HPKE_P256_CP128_SHA256.c",
 ];
-
-fn support_explicit_bzero() -> bool {
-    let out_dir = std::env::var_os("OUT_DIR").unwrap();
-    let path = Path::new(&out_dir).join("check_explicit_bzero.c");
-    std::fs::write(
-        &path,
-        &br#"
-#include <string.h>
-
-void f(void *ptr, size_t len) {
-    explicit_bzero(ptr, len);
-}
-"#[..],
-    )
-    .unwrap();
-    let result = cc::Build::new()
-        .cargo_metadata(false)
-        .warnings_into_errors(true)
-        .file(&path)
-        .try_compile("check_explicit_bzero")
-        .is_ok();
-    std::fs::remove_file(path).unwrap();
-    result
-}
 
 fn main() {
     let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
@@ -203,14 +181,6 @@ fn main() {
     }
     if arch == "x86" && env == "msvc" {
         config_h.write_all(b"#include <malloc.h>\n").unwrap();
-    }
-    if os == "linux" && !support_explicit_bzero() {
-        println!("cargo:warning=**********************************");
-        println!("cargo:warning=It seems that explicit_bzero is not supported. Disabling.");
-        println!("cargo:warning=**********************************");
-        config_h
-            .write_all(b"#define LINUX_NO_EXPLICIT_BZERO 1")
-            .unwrap();
     }
     config_h.flush().unwrap();
     drop(config_h);
@@ -286,21 +256,19 @@ fn main() {
     if !asm_sources.is_empty() {
         build_common
             .clone()
+            .flag_if_supported("/nologo")
             .files(map_sources(distro, asm_sources))
             .compile("evercrypt_asm");
     }
 
     #[allow(clippy::redundant_clone)]
-    build_common
-        .clone()
-        .files(map_sources(distro, c_sources))
-        .files(map_sources(
-            distro,
-            if arch == "x86_64" {
-                x86_64_c_sources
-            } else {
-                &[]
-            },
-        ))
-        .compile("evercrypt");
+    let mut build = build_common.clone();
+    build.files(map_sources(distro, c_sources));
+    if arch == "x86_64" {
+        build.files(map_sources(distro, x86_64_c_sources));
+    }
+    if os != "linux" {
+        build.files(map_sources(distro, non_linux_c_sources));
+    }
+    build.compile("evercrypt");
 }
