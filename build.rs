@@ -141,15 +141,23 @@ fn main() {
         sources.iter().map(move |s| Path::new(distro).join(s))
     }
 
-    let asm = match &*os {
+    let asm_os = match &*os {
         "windows" if env == "msvc" => "msvc",
         "windows" => "mingw",
-        "linux" | "android" => "linux",
-        "macos" | "ios" | "freebsd" | "dragonfly" | "openbsd" | "netbsd" => "darwin",
-        os => panic!("Unsupported target OS: {}", os),
+        // The difference between linux and darwin is whether the symbols are
+        // prefixed with an underscore. BSDs don't use the underscore either, so
+        // they use linux ASM sources.
+        "linux" | "android" | "freebsd" | "dragonfly" | "netbsd" | "openbsd" => "linux",
+        "macos" | "ios" => "darwin",
+        _ => {
+            println!(
+                "cargo:warning=evercrypt-sys: using linux asm sources, hopefully that'll work."
+            );
+            "linux"
+        }
     };
 
-    let asm_sources = match (asm, &*arch) {
+    let asm_sources = match (asm_os, &*arch) {
         ("linux", "x86_64") => x86_64_linux_asm_sources,
         ("mingw", "x86_64") => x86_64_mingw_asm_sources,
         ("darwin", "x86_64") => x86_64_darwin_asm_sources,
