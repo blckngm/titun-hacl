@@ -7,8 +7,67 @@ include!("bindings.rs");
 
 #[cfg(target_os = "linux")]
 #[no_mangle]
-unsafe fn Lib_Memzero0_memzero(ptr: *mut u8, size: u64) {
+unsafe extern "C" fn Lib_Memzero0_memzero(ptr: *mut u8, size: u64) {
     core::ptr::write_bytes(ptr, 0, size as usize);
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_avx() -> u64 {
+    std::is_x86_feature_detected!("avx").into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_avx2() -> u64 {
+    std::is_x86_feature_detected!("avx2").into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_aesni() -> u64 {
+    (std::is_x86_feature_detected!("aes") && std::is_x86_feature_detected!("pclmulqdq")).into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_sha() -> u64 {
+    std::is_x86_feature_detected!("sha").into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_adx_bmi2() -> u64 {
+    (std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2")).into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_movbe() -> u64 {
+    use core::arch::x86_64::__cpuid;
+    unsafe {
+        let result = __cpuid(1);
+        ((result.ecx & (1 << 22)) != 0).into()
+    }
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_sse() -> u64 {
+    std::is_x86_feature_detected!("sse4.2").into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_rdrand() -> u64 {
+    std::is_x86_feature_detected!("rdrand").into()
+}
+
+#[cfg(target_arch = "x86_64")]
+#[no_mangle]
+extern "C" fn check_avx512() -> u64 {
+    // TODO.
+    0
 }
 
 #[cfg(test)]

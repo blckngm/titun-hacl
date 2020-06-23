@@ -23,7 +23,6 @@ static x86_64_linux_asm_sources: &[&str] = &[
     "aesgcm-x86_64-linux.S",
     "aes-x86_64-linux.S",
     "curve25519-x86_64-linux.S",
-    "cpuid-x86_64-linux.S",
     "oldaesgcm-x86_64-linux.S",
 ];
 
@@ -33,7 +32,6 @@ static x86_64_mingw_asm_sources: &[&str] = &[
     "aesgcm-x86_64-mingw.S",
     "aes-x86_64-mingw.S",
     "curve25519-x86_64-mingw.S",
-    "cpuid-x86_64-mingw.S",
     "oldaesgcm-x86_64-mingw.S",
 ];
 
@@ -43,14 +41,12 @@ static x86_64_darwin_asm_sources: &[&str] = &[
     "aesgcm-x86_64-darwin.S",
     "aes-x86_64-darwin.S",
     "curve25519-x86_64-darwin.S",
-    "cpuid-x86_64-darwin.S",
     "oldaesgcm-x86_64-darwin.S",
 ];
 
 static x86_64_msvc_asm_sources: &[&str] = &[
     "aesgcm-x86_64-msvc.asm",
     "aes-x86_64-msvc.asm",
-    "cpuid-x86_64-msvc.asm",
     "curve25519-x86_64-msvc.asm",
     "oldaesgcm-x86_64-msvc.asm",
     "poly1305-x86_64-msvc.asm",
