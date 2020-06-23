@@ -10,3 +10,8 @@ edition = "2018"
 
 [build-dependencies]
 cc = { version = "1.0.54", features = [ "parallel" ] }
+
+# For performance comparison.
+[dev-dependencies]
+libsodium-sys = "0.2.5"
+x25519-dalek = "0.6.0"
