@@ -466,5 +466,5 @@ FStar_UInt128_uint128 FStar_UInt128_mul_wide(uint64_t x, uint64_t y) {
 #endif
 }
 
-#undef high
 #undef low
+#undef high

@@ -82,7 +82,6 @@ static c_sources: &[&str] = &[
     "Hacl_Chacha20Poly1305_32.c",
     "Hacl_Chacha20_Vec32.c",
     "Hacl_Curve25519_51.c",
-    "Hacl_ECDSA.c",
     "Hacl_Ed25519.c",
     "Hacl_Frodo_KEM.c",
     "Hacl_Hash.c",
