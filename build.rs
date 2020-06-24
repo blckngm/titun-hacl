@@ -55,7 +55,7 @@ static x86_64_msvc_asm_sources: &[&str] = &[
 
 static i686_msvc_asm_sources: &[&str] = &["aes-i686.asm"];
 
-static x86_64_c_sources: &[&str] = &["Hacl_Curve25519_64.c"];
+static adx_bmi2_c_sources: &[&str] = &["Hacl_Curve25519_64.c"];
 
 // Don't use explicit_bzero on linux.
 static non_linux_c_sources: &[&str] = &["Lib_Memzero0.c"];
@@ -78,45 +78,46 @@ static c_sources: &[&str] = &[
     "Hacl_AES.c",
     "Hacl_Blake2b_32.c",
     "Hacl_Blake2s_32.c",
+    "Hacl_Chacha20_Vec32.c",
     "Hacl_Chacha20.c",
     "Hacl_Chacha20Poly1305_32.c",
-    "Hacl_Chacha20_Vec32.c",
     "Hacl_Curve25519_51.c",
+    "Hacl_Curve25519_64_Slow.c",
     "Hacl_Ed25519.c",
     "Hacl_Frodo_KEM.c",
     "Hacl_Hash.c",
     "Hacl_HKDF.c",
-    "Hacl_HMAC.c",
     "Hacl_HMAC_DRBG.c",
-    "Hacl_HPKE_Curve51_CP32_SHA256.c",
-    "Hacl_HPKE_Curve51_CP32_SHA512.c",
-    "Hacl_HPKE_P256_CP32_SHA256.c",
-    "Hacl_Kremlib.c",
-    "Hacl_NaCl.c",
-    "Hacl_Poly1305_32.c",
-    "Hacl_Salsa20.c",
-    "Hacl_SHA3.c",
-    "Hacl_Spec.c",
-    "Hacl_Streaming_Poly1305_32.c",
-    "Lib_Memzero.c",
-    "Lib_PrintBuffer.c",
-    "Lib_RandomBuffer_System.c",
-    "MerkleTree.c",
-    "Vale.c",
-    "Hacl_Curve25519_64_Slow.c",
-    "Hacl_Streaming_SHA2_256.c",
+    "Hacl_HMAC.c",
+    "Hacl_HPKE_Curve51_CP128_SHA256.c",
+    "Hacl_HPKE_Curve51_CP128_SHA512.c",
     "Hacl_HPKE_Curve51_CP256_SHA256.c",
     "Hacl_HPKE_Curve51_CP256_SHA512.c",
+    "Hacl_HPKE_Curve51_CP32_SHA256.c",
+    "Hacl_HPKE_Curve51_CP32_SHA512.c",
     "Hacl_HPKE_Curve64_CP128_SHA256.c",
     "Hacl_HPKE_Curve64_CP128_SHA512.c",
     "Hacl_HPKE_Curve64_CP256_SHA256.c",
     "Hacl_HPKE_Curve64_CP256_SHA512.c",
     "Hacl_HPKE_Curve64_CP32_SHA256.c",
     "Hacl_HPKE_Curve64_CP32_SHA512.c",
-    "Hacl_HPKE_P256_CP256_SHA256.c",
-    "Hacl_HPKE_Curve51_CP128_SHA256.c",
-    "Hacl_HPKE_Curve51_CP128_SHA512.c",
     "Hacl_HPKE_P256_CP128_SHA256.c",
+    "Hacl_HPKE_P256_CP256_SHA256.c",
+    "Hacl_HPKE_P256_CP32_SHA256.c",
+    "Hacl_Kremlib.c",
+    "Hacl_NaCl.c",
+    "Hacl_P256.c",
+    "Hacl_Poly1305_32.c",
+    "Hacl_Salsa20.c",
+    "Hacl_SHA3.c",
+    "Hacl_Spec.c",
+    "Hacl_Streaming_Poly1305_32.c",
+    "Hacl_Streaming_SHA2_256.c",
+    "Lib_Memzero.c",
+    "Lib_PrintBuffer.c",
+    "Lib_RandomBuffer_System.c",
+    "MerkleTree.c",
+    "Vale.c",
 ];
 
 fn main() {
@@ -197,6 +198,14 @@ fn main() {
     let build_common = {
         let mut build = cc::Build::new();
         build.flag_if_supported("-std=gnu11");
+        build.flag_if_supported("-fwrapv");
+        if os != "windows" {
+            build.define("_BSD_SOURCE", None);
+            build.define("_DEFAULT_SOURCE", None);
+        } else if env == "gnu" {
+            build.flag_if_supported("-fno-asynchronous-unwind-tables");
+        }
+        build.flag_if_supported("-mtune=skylake");
         build.warnings(false);
         build.extra_warnings(false);
         build.include(out_dir);
@@ -265,12 +274,18 @@ fn main() {
         build.compile("evercrypt_asm");
     }
 
+    if arch == "x86_64" {
+        let mut build = build_common.clone();
+        // Need these or clang won't be happy with the inline assembly.
+        build.flag_if_supported("-madx");
+        build.flag_if_supported("-mbmi2");
+        build.files(map_sources(distro, adx_bmi2_c_sources));
+        build.compile("evercrypt_adx_bmi2");
+    }
+
     #[allow(clippy::redundant_clone)]
     let mut build = build_common.clone();
     build.files(map_sources(distro, c_sources));
-    if arch == "x86_64" {
-        build.files(map_sources(distro, x86_64_c_sources));
-    }
     if os != "linux" {
         build.files(map_sources(distro, non_linux_c_sources));
     }
