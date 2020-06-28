@@ -246,11 +246,8 @@ fn main() {
     if build_vec128 {
         let mut build = build_common.clone();
         build
-            .flag_if_supported("/arch:AVX")
-            .flag_if_supported("-mavx")
-            // IVB is the last generation of Intel CPUs that supports AVX but
-            // not AVX2.
-            .flag_if_supported("-mtune=ivybridge")
+            .flag_if_supported("-mtune=silvermont")
+            .flag_if_supported("-msse4.2")
             .flag_if_supported("-march=armv8-a+simd");
 
         if arch == "aarch64" && opt_level == "0" {
