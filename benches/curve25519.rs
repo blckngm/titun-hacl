@@ -15,12 +15,16 @@ fn bench_curve25519_scalarmult(b: &mut Bencher) {
         230, 219, 104, 103, 88, 48, 48, 219, 53, 148, 193, 164, 36, 177, 95, 124, 114, 102, 36,
         236, 38, 179, 53, 59, 16, 169, 3, 166, 208, 171, 28, 76,
     ];
-    unsafe {
-        EverCrypt_AutoConfig2_init();
-    };
 
     b.iter(|| unsafe {
-        EverCrypt_Curve25519_scalarmult(
+        #[cfg(target_arch = "x86_64")]
+        Hacl_Curve25519_64_scalarmult(
+            out.as_mut_ptr(),
+            our_secret.as_ptr() as _,
+            their_public.as_ptr() as _,
+        );
+        #[cfg(not(target_arch = "x86_64"))]
+        Hacl_Curve25519_51_scalarmult(
             out.as_mut_ptr(),
             our_secret.as_ptr() as _,
             their_public.as_ptr() as _,

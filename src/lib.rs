@@ -1,73 +1,75 @@
-#![allow(non_snake_case, non_camel_case_types, non_upper_case_globals)]
-
-// Opaque type.
-pub type EverCrypt_Hash_state_s = u8;
+#![allow(
+    non_snake_case,
+    non_camel_case_types,
+    non_upper_case_globals,
+    clippy::missing_safety_doc,
+    clippy::too_many_arguments
+)]
 
 include!("bindings.rs");
 
-#[cfg(target_os = "linux")]
-#[no_mangle]
-unsafe extern "C" fn Lib_Memzero0_memzero(ptr: *mut u8, size: u64) {
-    core::ptr::write_bytes(ptr, 0, size as usize);
-}
-
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_avx() -> u64 {
-    std::is_x86_feature_detected!("avx").into()
-}
-
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_avx2() -> u64 {
-    std::is_x86_feature_detected!("avx2").into()
-}
-
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_aesni() -> u64 {
-    (std::is_x86_feature_detected!("aes") && std::is_x86_feature_detected!("pclmulqdq")).into()
-}
-
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_sha() -> u64 {
-    std::is_x86_feature_detected!("sha").into()
-}
-
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_adx_bmi2() -> u64 {
-    (std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2")).into()
-}
-
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_movbe() -> u64 {
-    use core::arch::x86_64::__cpuid;
-    unsafe {
-        let result = __cpuid(1);
-        ((result.ecx & (1 << 22)) != 0).into()
+pub unsafe fn Hacl_ChaCha20Poly1305_multiplexed_aead_encrypt(
+    k: *mut u8,
+    n: *mut u8,
+    aadlen: u32,
+    aad: *mut u8,
+    mlen: u32,
+    m: *mut u8,
+    cipher: *mut u8,
+    mac: *mut u8,
+) {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            return Hacl_Chacha20Poly1305_256_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
+        } else if std::is_x86_feature_detected!("sse4.2") {
+            return Hacl_Chacha20Poly1305_128_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
+        }
     }
+    Hacl_Chacha20Poly1305_32_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
 }
 
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_sse() -> u64 {
-    std::is_x86_feature_detected!("sse4.2").into()
+pub unsafe fn Hacl_ChaCha20Poly1305_multiplexed_aead_decrypt(
+    k: *mut u8,
+    n: *mut u8,
+    aadlen: u32,
+    aad: *mut u8,
+    mlen: u32,
+    m: *mut u8,
+    cipher: *mut u8,
+    mac: *mut u8,
+) -> u32 {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if std::is_x86_feature_detected!("avx2") {
+            return Hacl_Chacha20Poly1305_256_aead_decrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
+        } else if std::is_x86_feature_detected!("sse4.2") {
+            return Hacl_Chacha20Poly1305_128_aead_decrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
+        }
+    }
+    Hacl_Chacha20Poly1305_32_aead_decrypt(k, n, aadlen, aad, mlen, m, cipher, mac)
 }
 
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_rdrand() -> u64 {
-    std::is_x86_feature_detected!("rdrand").into()
+pub unsafe fn Hacl_Curve25519_multiplexed_scalarmult(out: *mut u8, priv_: *mut u8, pub_: *mut u8) {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
+            Hacl_Curve25519_64_scalarmult(out, priv_, pub_);
+            return;
+        }
+    }
+    Hacl_Curve25519_51_scalarmult(out, priv_, pub_)
 }
 
-#[cfg(target_arch = "x86_64")]
-#[no_mangle]
-extern "C" fn check_avx512() -> u64 {
-    // TODO.
-    0
+pub unsafe fn Hacl_Curve25519_multiplexed_secret_to_public(pub_: *mut u8, priv_: *mut u8) {
+    #[cfg(target_arch = "x86_64")]
+    {
+        if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
+            Hacl_Curve25519_64_secret_to_public(pub_, priv_);
+            return;
+        }
+    }
+    Hacl_Curve25519_51_secret_to_public(pub_, priv_)
 }
 
 #[cfg(test)]
@@ -116,8 +118,7 @@ mod tests {
         let mut tag = [0u8; 16];
 
         unsafe {
-            EverCrypt_AutoConfig2_init();
-            EverCrypt_Chacha20Poly1305_aead_encrypt(
+            Hacl_ChaCha20Poly1305_multiplexed_aead_encrypt(
                 KEY.as_ptr() as _,
                 NONCE.as_ptr() as _,
                 AAD.len().try_into().unwrap(),
@@ -132,7 +133,7 @@ mod tests {
             for b in &mut m[..] {
                 *b = 0;
             }
-            let r = EverCrypt_Chacha20Poly1305_aead_decrypt(
+            let r = Hacl_ChaCha20Poly1305_multiplexed_aead_decrypt(
                 KEY.as_ptr() as _,
                 NONCE.as_ptr() as _,
                 AAD.len().try_into().unwrap(),
@@ -146,7 +147,7 @@ mod tests {
             assert_eq!(m, PLAINTEXT);
 
             tag[0] = tag[0].wrapping_add(1);
-            let r = EverCrypt_Chacha20Poly1305_aead_decrypt(
+            let r = Hacl_ChaCha20Poly1305_multiplexed_aead_decrypt(
                 KEY.as_ptr() as _,
                 NONCE.as_ptr() as _,
                 AAD.len().try_into().unwrap(),
@@ -161,52 +162,6 @@ mod tests {
     }
 
     #[test]
-    fn blake2s_vector() {
-        let input = b"abc";
-        let mut output = [0u8; 32];
-        let key: &[u8] = &[];
-
-        if cfg!(any(target_arch = "aarch64", target_arch = "x86-64")) {
-            unsafe {
-                Hacl_Blake2s_128_blake2s(
-                    output.len() as _,
-                    output.as_mut_ptr(),
-                    input.len() as _,
-                    input.as_ptr() as _,
-                    key.len() as _,
-                    key.as_ptr() as _,
-                );
-            }
-            assert_eq!(
-                output,
-                [
-                    0x50, 0x8C, 0x5E, 0x8C, 0x32, 0x7C, 0x14, 0xE2, 0xE1, 0xA7, 0x2B, 0xA3, 0x4E,
-                    0xEB, 0x45, 0x2F, 0x37, 0x45, 0x8B, 0x20, 0x9E, 0xD6, 0x3A, 0x29, 0x4D, 0x99,
-                    0x9B, 0x4C, 0x86, 0x67, 0x59, 0x82,
-                ]
-            );
-        }
-        unsafe {
-            Hacl_Blake2s_32_blake2s(
-                output.len() as _,
-                output.as_mut_ptr(),
-                input.len() as _,
-                input.as_ptr() as _,
-                key.len() as _,
-                key.as_ptr() as _,
-            );
-        }
-        assert_eq!(
-            output,
-            [
-                0x50, 0x8C, 0x5E, 0x8C, 0x32, 0x7C, 0x14, 0xE2, 0xE1, 0xA7, 0x2B, 0xA3, 0x4E, 0xEB,
-                0x45, 0x2F, 0x37, 0x45, 0x8B, 0x20, 0x9E, 0xD6, 0x3A, 0x29, 0x4D, 0x99, 0x9B, 0x4C,
-                0x86, 0x67, 0x59, 0x82,
-            ]
-        );
-    }
-
-    #[test]
     fn curve25519_vector() {
         let mut out = [0u8; 32];
         let our_secret: [u8; 32] = [
@@ -217,9 +172,27 @@ mod tests {
             230, 219, 104, 103, 88, 48, 48, 219, 53, 148, 193, 164, 36, 177, 95, 124, 114, 102, 36,
             236, 38, 179, 53, 59, 16, 169, 3, 166, 208, 171, 28, 76,
         ];
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
+                unsafe {
+                    Hacl_Curve25519_64_scalarmult(
+                        out.as_mut_ptr(),
+                        our_secret.as_ptr() as _,
+                        their_public.as_ptr() as _,
+                    )
+                };
+                assert_eq!(
+                    out,
+                    [
+                        195, 218, 85, 55, 157, 233, 198, 144, 142, 148, 234, 77, 242, 141, 8, 79,
+                        50, 236, 207, 3, 73, 28, 113, 247, 84, 180, 7, 85, 119, 162, 133, 82
+                    ]
+                );
+            }
+        }
         unsafe {
-            EverCrypt_AutoConfig2_init();
-            EverCrypt_Curve25519_scalarmult(
+            Hacl_Curve25519_51_scalarmult(
                 out.as_mut_ptr(),
                 our_secret.as_ptr() as _,
                 their_public.as_ptr() as _,
