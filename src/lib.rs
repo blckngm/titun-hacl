@@ -6,76 +6,134 @@
     clippy::too_many_arguments
 )]
 
+use core::convert::TryInto;
+
 include!("bindings.rs");
 
-pub unsafe fn Hacl_ChaCha20Poly1305_multiplexed_aead_encrypt(
-    k: *mut u8,
-    n: *mut u8,
-    aadlen: u32,
-    aad: *mut u8,
-    mlen: u32,
-    m: *mut u8,
-    cipher: *mut u8,
-    mac: *mut u8,
+#[inline]
+pub fn chacha20_poly1305_multiplexed_aead_encrypt(
+    k: &[u8; 32],
+    n: &[u8; 12],
+    aad: &[u8],
+    m: &[u8],
+    cipher: &mut [u8],
+    mac: &mut [u8; 16],
 ) {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if std::is_x86_feature_detected!("avx2") {
-            return Hacl_Chacha20Poly1305_256_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
-        } else if std::is_x86_feature_detected!("sse4.2") {
-            return Hacl_Chacha20Poly1305_128_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
+    assert_eq!(cipher.len(), m.len());
+
+    let k = k.as_ptr() as *mut u8;
+    let n = n.as_ptr() as *mut u8;
+    let aadlen = aad.len().try_into().unwrap();
+    let aad = aad.as_ptr() as *mut u8;
+    let mlen = m.len().try_into().unwrap();
+    let m = m.as_ptr() as *mut u8;
+    let cipher = cipher.as_mut_ptr();
+    let mac = mac.as_mut_ptr();
+
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::is_x86_feature_detected!("avx2") {
+                return Hacl_Chacha20Poly1305_256_aead_encrypt(
+                    k, n, aadlen, aad, mlen, m, cipher, mac,
+                );
+            } else if std::is_x86_feature_detected!("sse4.2") {
+                return Hacl_Chacha20Poly1305_128_aead_encrypt(
+                    k, n, aadlen, aad, mlen, m, cipher, mac,
+                );
+            }
         }
+        Hacl_Chacha20Poly1305_32_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
     }
-    Hacl_Chacha20Poly1305_32_aead_encrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
 }
 
-pub unsafe fn Hacl_ChaCha20Poly1305_multiplexed_aead_decrypt(
-    k: *mut u8,
-    n: *mut u8,
-    aadlen: u32,
-    aad: *mut u8,
-    mlen: u32,
-    m: *mut u8,
-    cipher: *mut u8,
-    mac: *mut u8,
-) -> u32 {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if std::is_x86_feature_detected!("avx2") {
-            return Hacl_Chacha20Poly1305_256_aead_decrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
-        } else if std::is_x86_feature_detected!("sse4.2") {
-            return Hacl_Chacha20Poly1305_128_aead_decrypt(k, n, aadlen, aad, mlen, m, cipher, mac);
+#[inline]
+pub fn chacha20_poly1305_multiplexed_aead_decrypt(
+    k: &[u8; 32],
+    n: &[u8; 12],
+    aad: &[u8],
+    m: &mut [u8],
+    cipher: &[u8],
+    mac: &[u8; 16],
+) -> Result<(), ()> {
+    assert_eq!(cipher.len(), m.len());
+
+    let k = k.as_ptr() as *mut u8;
+    let n = n.as_ptr() as *mut u8;
+    let aadlen = aad.len().try_into().unwrap();
+    let aad = aad.as_ptr() as *mut u8;
+    let mlen = m.len().try_into().unwrap();
+    let m = m.as_mut_ptr();
+    let cipher = cipher.as_ptr() as *mut u8;
+    let mac = mac.as_ptr() as *mut u8;
+
+    fn result(code: u32) -> Result<(), ()> {
+        match code {
+            0 => Ok(()),
+            _ => Err(()),
         }
     }
-    Hacl_Chacha20Poly1305_32_aead_decrypt(k, n, aadlen, aad, mlen, m, cipher, mac)
+
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::is_x86_feature_detected!("avx2") {
+                return result(Hacl_Chacha20Poly1305_256_aead_decrypt(
+                    k, n, aadlen, aad, mlen, m, cipher, mac,
+                ));
+            } else if std::is_x86_feature_detected!("sse4.2") {
+                return result(Hacl_Chacha20Poly1305_128_aead_decrypt(
+                    k, n, aadlen, aad, mlen, m, cipher, mac,
+                ));
+            }
+        }
+        result(Hacl_Chacha20Poly1305_32_aead_decrypt(
+            k, n, aadlen, aad, mlen, m, cipher, mac,
+        ))
+    }
 }
 
-pub unsafe fn Hacl_Curve25519_multiplexed_scalarmult(out: *mut u8, priv_: *mut u8, pub_: *mut u8) {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
-            Hacl_Curve25519_64_scalarmult(out, priv_, pub_);
-            return;
+#[inline]
+pub fn curve25519_multiplexed_scalarmult(
+    our_secret: &[u8; 32],
+    their_public: &[u8; 32],
+) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    let priv_ = our_secret.as_ptr() as *mut u8;
+    let pub_ = their_public.as_ptr() as *mut u8;
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
+                Hacl_Curve25519_64_scalarmult(out.as_mut_ptr(), priv_, pub_);
+                return out;
+            }
         }
+        Hacl_Curve25519_51_scalarmult(out.as_mut_ptr(), priv_, pub_);
+        out
     }
-    Hacl_Curve25519_51_scalarmult(out, priv_, pub_)
 }
 
-pub unsafe fn Hacl_Curve25519_multiplexed_secret_to_public(pub_: *mut u8, priv_: *mut u8) {
-    #[cfg(target_arch = "x86_64")]
-    {
-        if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
-            Hacl_Curve25519_64_secret_to_public(pub_, priv_);
-            return;
+#[inline]
+pub fn curve25519_multiplexed_secret_to_public(secret: &[u8; 32]) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    let priv_ = secret.as_ptr() as *mut u8;
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
+                Hacl_Curve25519_64_secret_to_public(out.as_mut_ptr(), priv_);
+                return out;
+            }
         }
+        Hacl_Curve25519_51_secret_to_public(out.as_mut_ptr(), priv_);
+        out
     }
-    Hacl_Curve25519_51_secret_to_public(pub_, priv_)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use core::convert::TryInto;
 
     #[test]
     fn chacha20_poly1305_vector() {
@@ -117,53 +175,25 @@ mod tests {
         let mut c = vec![0u8; PLAINTEXT.len()];
         let mut tag = [0u8; 16];
 
-        unsafe {
-            Hacl_ChaCha20Poly1305_multiplexed_aead_encrypt(
-                KEY.as_ptr() as _,
-                NONCE.as_ptr() as _,
-                AAD.len().try_into().unwrap(),
-                AAD.as_ptr() as _,
-                m.len().try_into().unwrap(),
-                m.as_mut_ptr(),
-                c.as_mut_ptr(),
-                tag.as_mut_ptr(),
-            );
-            assert_eq!(tag, TAG);
-            assert_eq!(c, CIPHERTEXT);
-            for b in &mut m[..] {
-                *b = 0;
-            }
-            let r = Hacl_ChaCha20Poly1305_multiplexed_aead_decrypt(
-                KEY.as_ptr() as _,
-                NONCE.as_ptr() as _,
-                AAD.len().try_into().unwrap(),
-                AAD.as_ptr() as _,
-                m.len().try_into().unwrap(),
-                m.as_mut_ptr(),
-                c.as_mut_ptr(),
-                tag.as_mut_ptr(),
-            );
-            assert_eq!(r, 0);
-            assert_eq!(m, PLAINTEXT);
+        chacha20_poly1305_multiplexed_aead_encrypt(KEY, NONCE, AAD, PLAINTEXT, &mut c, &mut tag);
 
-            tag[0] = tag[0].wrapping_add(1);
-            let r = Hacl_ChaCha20Poly1305_multiplexed_aead_decrypt(
-                KEY.as_ptr() as _,
-                NONCE.as_ptr() as _,
-                AAD.len().try_into().unwrap(),
-                AAD.as_ptr() as _,
-                m.len().try_into().unwrap(),
-                m.as_mut_ptr(),
-                c.as_mut_ptr(),
-                tag.as_mut_ptr(),
-            );
-            assert_ne!(r, 0);
+        assert_eq!(tag, TAG);
+        assert_eq!(c, CIPHERTEXT);
+        for b in &mut m[..] {
+            *b = 0;
         }
+
+        let r = chacha20_poly1305_multiplexed_aead_decrypt(KEY, NONCE, AAD, &mut m, &c, &tag);
+        assert!(r.is_ok());
+        assert_eq!(m, PLAINTEXT);
+
+        tag[0] = tag[0].wrapping_add(1);
+        let r = chacha20_poly1305_multiplexed_aead_decrypt(KEY, NONCE, AAD, &mut m, &c, &tag);
+        assert!(r.is_err());
     }
 
     #[test]
     fn curve25519_vector() {
-        let mut out = [0u8; 32];
         let our_secret: [u8; 32] = [
             165, 70, 227, 107, 240, 82, 124, 157, 59, 22, 21, 75, 130, 70, 94, 221, 98, 20, 76, 10,
             193, 252, 90, 24, 80, 106, 34, 68, 186, 68, 154, 196,
@@ -172,32 +202,7 @@ mod tests {
             230, 219, 104, 103, 88, 48, 48, 219, 53, 148, 193, 164, 36, 177, 95, 124, 114, 102, 36,
             236, 38, 179, 53, 59, 16, 169, 3, 166, 208, 171, 28, 76,
         ];
-        #[cfg(target_arch = "x86_64")]
-        {
-            if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
-                unsafe {
-                    Hacl_Curve25519_64_scalarmult(
-                        out.as_mut_ptr(),
-                        our_secret.as_ptr() as _,
-                        their_public.as_ptr() as _,
-                    )
-                };
-                assert_eq!(
-                    out,
-                    [
-                        195, 218, 85, 55, 157, 233, 198, 144, 142, 148, 234, 77, 242, 141, 8, 79,
-                        50, 236, 207, 3, 73, 28, 113, 247, 84, 180, 7, 85, 119, 162, 133, 82
-                    ]
-                );
-            }
-        }
-        unsafe {
-            Hacl_Curve25519_51_scalarmult(
-                out.as_mut_ptr(),
-                our_secret.as_ptr() as _,
-                their_public.as_ptr() as _,
-            )
-        };
+        let out = curve25519_multiplexed_scalarmult(&our_secret, &their_public);
         assert_eq!(
             out,
             [

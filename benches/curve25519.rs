@@ -6,7 +6,6 @@ use test::Bencher;
 
 #[bench]
 fn bench_curve25519_scalarmult(b: &mut Bencher) {
-    let mut out = [0u8; 32];
     let our_secret: [u8; 32] = [
         165, 70, 227, 107, 240, 82, 124, 157, 59, 22, 21, 75, 130, 70, 94, 221, 98, 20, 76, 10,
         193, 252, 90, 24, 80, 106, 34, 68, 186, 68, 154, 196,
@@ -16,20 +15,7 @@ fn bench_curve25519_scalarmult(b: &mut Bencher) {
         236, 38, 179, 53, 59, 16, 169, 3, 166, 208, 171, 28, 76,
     ];
 
-    b.iter(|| unsafe {
-        #[cfg(target_arch = "x86_64")]
-        Hacl_Curve25519_64_scalarmult(
-            out.as_mut_ptr(),
-            our_secret.as_ptr() as _,
-            their_public.as_ptr() as _,
-        );
-        #[cfg(not(target_arch = "x86_64"))]
-        Hacl_Curve25519_51_scalarmult(
-            out.as_mut_ptr(),
-            our_secret.as_ptr() as _,
-            their_public.as_ptr() as _,
-        );
-    })
+    b.iter(|| curve25519_multiplexed_scalarmult(&our_secret, &their_public))
 }
 
 #[bench]
