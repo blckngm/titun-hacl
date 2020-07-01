@@ -1,8 +1,8 @@
 #![feature(test)]
 extern crate test;
 
-use evercrypt_sys::*;
 use test::Bencher;
+use titun_hacl::*;
 
 #[bench]
 fn bench_curve25519_scalarmult(b: &mut Bencher) {

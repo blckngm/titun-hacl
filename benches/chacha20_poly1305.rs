@@ -1,10 +1,10 @@
 #![feature(test)]
 extern crate test;
 
-use evercrypt_sys::*;
 use std::convert::TryInto;
 use std::ptr;
 use test::{black_box, Bencher};
+use titun_hacl::*;
 
 #[cfg(target_arch = "x86_64")]
 #[bench]
