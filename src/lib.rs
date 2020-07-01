@@ -8,7 +8,9 @@
 
 use core::convert::TryInto;
 
-include!("bindings.rs");
+mod bindings;
+#[doc(hidden)]
+pub use bindings::*;
 
 #[inline]
 pub fn chacha20_poly1305_multiplexed_aead_encrypt(
@@ -111,6 +113,31 @@ pub fn curve25519_multiplexed_scalarmult(
         }
         Hacl_Curve25519_51_scalarmult(out.as_mut_ptr(), priv_, pub_);
         out
+    }
+}
+
+#[inline]
+pub fn curve25519_multiplexed_ecdh(
+    our_secret: &[u8; 32],
+    their_public: &[u8; 32],
+) -> Result<[u8; 32], ()> {
+    let mut out = [0u8; 32];
+    let priv_ = our_secret.as_ptr() as *mut u8;
+    let pub_ = their_public.as_ptr() as *mut u8;
+    unsafe {
+        #[cfg(target_arch = "x86_64")]
+        {
+            if std::is_x86_feature_detected!("adx") && std::is_x86_feature_detected!("bmi2") {
+                let r = Hacl_Curve25519_64_ecdh(out.as_mut_ptr(), priv_, pub_);
+                return if r { Ok(out) } else { Err(()) };
+            }
+        }
+        let r = Hacl_Curve25519_51_ecdh(out.as_mut_ptr(), priv_, pub_);
+        if r {
+            Ok(out)
+        } else {
+            Err(())
+        }
     }
 }
 
