@@ -3,7 +3,8 @@
     non_camel_case_types,
     non_upper_case_globals,
     clippy::missing_safety_doc,
-    clippy::too_many_arguments
+    clippy::too_many_arguments,
+    clippy::result_unit_err
 )]
 
 use core::convert::TryInto;
