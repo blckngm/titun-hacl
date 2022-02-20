@@ -184,6 +184,7 @@ fn main() {
     if arch == "x86_64" {
         config_h_define("HACL_CAN_COMPILE_VALE", "1");
         if env != "msvc" {
+            config_h_define("HACL_CAN_COMPILE_UINT128", "1");
             config_h_define("HACL_CAN_COMPILE_INLINE_ASM", "1");
         }
     }
