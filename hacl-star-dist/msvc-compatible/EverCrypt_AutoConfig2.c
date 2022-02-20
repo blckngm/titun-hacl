@@ -24,6 +24,8 @@
 
 #include "EverCrypt_AutoConfig2.h"
 
+#include "internal/Vale.h"
+
 static bool cpu_has_shaext[1U] = { false };
 
 static bool cpu_has_aesni[1U] = { false };
@@ -109,6 +111,8 @@ bool EverCrypt_AutoConfig2_has_avx512()
   return cpu_has_avx512[0U];
 }
 
+KRML_DEPRECATED("")
+
 bool EverCrypt_AutoConfig2_wants_vale()
 {
   return user_wants_vale[0U];
@@ -131,12 +135,12 @@ bool EverCrypt_AutoConfig2_wants_bcrypt()
 
 void EverCrypt_AutoConfig2_recall()
 {
-  
+
 }
 
 void EverCrypt_AutoConfig2_init()
 {
-  #if EVERCRYPT_TARGETCONFIG_X64
+  #if HACL_CAN_COMPILE_VALE
   uint64_t scrut = check_aesni();
   if (scrut != (uint64_t)0U)
   {
@@ -157,12 +161,28 @@ void EverCrypt_AutoConfig2_init()
   uint64_t scrut2 = check_avx();
   if (scrut2 != (uint64_t)0U)
   {
-    cpu_has_avx[0U] = true;
+    uint64_t scrut3 = check_osxsave();
+    if (scrut3 != (uint64_t)0U)
+    {
+      uint64_t scrut4 = check_avx_xcr0();
+      if (scrut4 != (uint64_t)0U)
+      {
+        cpu_has_avx[0U] = true;
+      }
+    }
   }
   uint64_t scrut3 = check_avx2();
   if (scrut3 != (uint64_t)0U)
   {
-    cpu_has_avx2[0U] = true;
+    uint64_t scrut4 = check_osxsave();
+    if (scrut4 != (uint64_t)0U)
+    {
+      uint64_t scrut5 = check_avx_xcr0();
+      if (scrut5 != (uint64_t)0U)
+      {
+        cpu_has_avx2[0U] = true;
+      }
+    }
   }
   uint64_t scrut4 = check_sse();
   if (scrut4 != (uint64_t)0U)
@@ -182,7 +202,19 @@ void EverCrypt_AutoConfig2_init()
   uint64_t scrut7 = check_avx512();
   if (scrut7 != (uint64_t)0U)
   {
-    cpu_has_avx512[0U] = true;
+    uint64_t scrut8 = check_osxsave();
+    if (scrut8 != (uint64_t)0U)
+    {
+      uint64_t scrut9 = check_avx_xcr0();
+      if (scrut9 != (uint64_t)0U)
+      {
+        uint64_t scrut10 = check_avx512_xcr0();
+        if (scrut10 != (uint64_t)0U)
+        {
+          cpu_has_avx512[0U] = true;
+        }
+      }
+    }
   }
   #endif
   user_wants_hacl[0U] = true;
@@ -264,5 +296,19 @@ void EverCrypt_AutoConfig2_disable_openssl()
 void EverCrypt_AutoConfig2_disable_bcrypt()
 {
   user_wants_bcrypt[0U] = false;
+}
+
+bool EverCrypt_AutoConfig2_has_vec128()
+{
+  bool avx = EverCrypt_AutoConfig2_has_avx();
+  bool other = has_vec128_not_avx();
+  return avx || other;
+}
+
+bool EverCrypt_AutoConfig2_has_vec256()
+{
+  bool avx2 = EverCrypt_AutoConfig2_has_avx2();
+  bool other = has_vec256_not_avx2();
+  return avx2 || other;
 }
 

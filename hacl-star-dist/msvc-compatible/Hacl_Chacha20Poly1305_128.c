@@ -24,6 +24,9 @@
 
 #include "Hacl_Chacha20Poly1305_128.h"
 
+#include "internal/Hacl_Poly1305_128.h"
+#include "internal/Hacl_Kremlib.h"
+
 static inline void
 poly1305_padded_128(Lib_IntVector_Intrinsics_vec128 *ctx, uint32_t len, uint8_t *text)
 {
@@ -50,9 +53,9 @@ poly1305_padded_128(Lib_IntVector_Intrinsics_vec128 *ctx, uint32_t len, uint8_t 
       Lib_IntVector_Intrinsics_vec128 e[5U];
       for (uint32_t _i = 0U; _i < (uint32_t)5U; ++_i)
         e[_i] = Lib_IntVector_Intrinsics_vec128_zero;
-      Lib_IntVector_Intrinsics_vec128 b1 = Lib_IntVector_Intrinsics_vec128_load_le(block);
+      Lib_IntVector_Intrinsics_vec128 b1 = Lib_IntVector_Intrinsics_vec128_load64_le(block);
       Lib_IntVector_Intrinsics_vec128
-      b2 = Lib_IntVector_Intrinsics_vec128_load_le(block + (uint32_t)16U);
+      b2 = Lib_IntVector_Intrinsics_vec128_load64_le(block + (uint32_t)16U);
       Lib_IntVector_Intrinsics_vec128 lo = Lib_IntVector_Intrinsics_vec128_interleave_low64(b1, b2);
       Lib_IntVector_Intrinsics_vec128
       hi = Lib_IntVector_Intrinsics_vec128_interleave_high64(b1, b2);
@@ -485,7 +488,7 @@ poly1305_padded_128(Lib_IntVector_Intrinsics_vec128 *ctx, uint32_t len, uint8_t 
     for (uint32_t _i = 0U; _i < (uint32_t)5U; ++_i)
       e[_i] = Lib_IntVector_Intrinsics_vec128_zero;
     uint8_t tmp[16U] = { 0U };
-    memcpy(tmp, last, rem1 * sizeof (last[0U]));
+    memcpy(tmp, last, rem1 * sizeof (uint8_t));
     uint64_t u0 = load64_le(tmp);
     uint64_t lo = u0;
     uint64_t u = load64_le(tmp + (uint32_t)8U);
@@ -690,7 +693,7 @@ poly1305_padded_128(Lib_IntVector_Intrinsics_vec128 *ctx, uint32_t len, uint8_t 
     acc0[4U] = o4;
   }
   uint8_t tmp[16U] = { 0U };
-  memcpy(tmp, rem, r * sizeof (rem[0U]));
+  memcpy(tmp, rem, r * sizeof (uint8_t));
   if (r > (uint32_t)0U)
   {
     Lib_IntVector_Intrinsics_vec128 *pre = ctx + (uint32_t)5U;
@@ -919,8 +922,14 @@ poly1305_do_128(
     ctx[_i] = Lib_IntVector_Intrinsics_vec128_zero;
   uint8_t block[16U] = { 0U };
   Hacl_Poly1305_128_poly1305_init(ctx, k);
-  poly1305_padded_128(ctx, aadlen, aad);
-  poly1305_padded_128(ctx, mlen, m);
+  if (aadlen != (uint32_t)0U)
+  {
+    poly1305_padded_128(ctx, aadlen, aad);
+  }
+  if (mlen != (uint32_t)0U)
+  {
+    poly1305_padded_128(ctx, mlen, m);
+  }
   store64_le(block, (uint64_t)aadlen);
   store64_le(block + (uint32_t)8U, (uint64_t)mlen);
   Lib_IntVector_Intrinsics_vec128 *pre = ctx + (uint32_t)5U;

@@ -22,7 +22,9 @@
  */
 
 
-#include "Hacl_Kremlib.h"
+#include "internal/Hacl_Kremlib.h"
+
+
 
 static uint32_t max_uint32 = (uint32_t)4294967295U;
 
@@ -33,6 +35,10 @@ uint32_t LowStar_Vector_new_capacity(uint32_t cap)
   if (cap >= max_uint32 / resize_ratio)
   {
     return max_uint32;
+  }
+  if (cap == (uint32_t)0U)
+  {
+    return (uint32_t)1U;
   }
   return cap * resize_ratio;
 }

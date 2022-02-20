@@ -21,6 +21,14 @@
  * SOFTWARE.
  */
 
+
+#ifndef __Hacl_P256_H
+#define __Hacl_P256_H
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "evercrypt_targetconfig.h"
 #include "lib_intrinsics.h"
 #include "libintvector.h"
@@ -29,41 +37,43 @@
 #include <string.h>
 #include "kremlin/internal/target.h"
 
-#ifndef __Hacl_P256_H
-#define __Hacl_P256_H
 
-#include "Hacl_Kremlib.h"
-#include "Hacl_Hash.h"
 #include "Hacl_Spec.h"
+#include "Hacl_Kremlib.h"
+#include "Hacl_Hash_SHA2.h"
 
 
-void Hacl_Impl_P256_LowLevel_toUint8(uint64_t *i, uint8_t *o);
+/*******************************************************************************
 
-void Hacl_Impl_P256_LowLevel_changeEndian(uint64_t *i);
+ECDSA and ECDH functions over the P-256 NIST curve.
 
-void Hacl_Impl_P256_LowLevel_toUint64ChangeEndian(uint8_t *i, uint64_t *o);
+This module implements signing and verification, key validation, conversions
+between various point representations, and ECDH key agreement.
 
-uint64_t Hacl_Impl_P256_Core_isPointAtInfinityPrivate(uint64_t *p);
+*******************************************************************************/
 
-void
-Hacl_Impl_P256_Core_secretToPublic(uint64_t *result, uint8_t *scalar, uint64_t *tempBuffer);
+/**************/
+/* Signatures */
+/**************/
 
 /*
-  This code is not side channel resistant on pubKey
+  Per the standard, a hash function *shall* be used. Therefore, we recommend
+  using one of the three combined hash-and-sign variants.
 */
-uint64_t Hacl_Impl_P256_DH__ecp256dh_r(uint64_t *result, uint64_t *pubKey, uint8_t *scalar);
 
 /*
- Input: result buffer: uint8[64], 
+Hash the message with SHA2-256, then sign the resulting digest with the P256 signature function.
+
+Input: result buffer: uint8[64], 
  m buffer: uint8 [mLen], 
  priv(ate)Key: uint8[32], 
  k (nonce): uint32[32]. 
   
- Output: uint64, where 0 stands for the correct signature generation. All the other values mean that an error has occurred. 
+ Output: bool, where True stands for the correct signature generation. False value means that an error has occurred. 
   
- The private key and the nonce are expected to be less than the curve order.
+ The private key and the nonce are expected to be more than 0 and less than the curve order.
 */
-uint64_t
+bool
 Hacl_P256_ecdsa_sign_p256_sha2(
   uint8_t *result,
   uint32_t mLen,
@@ -73,16 +83,18 @@ Hacl_P256_ecdsa_sign_p256_sha2(
 );
 
 /*
- Input: result buffer: uint8[64], 
+Hash the message with SHA2-384, then sign the resulting digest with the P256 signature function.
+
+Input: result buffer: uint8[64], 
  m buffer: uint8 [mLen], 
  priv(ate)Key: uint8[32], 
  k (nonce): uint32[32]. 
   
- Output: uint64, where 0 stands for the correct signature generation. All the other values mean that an error has occurred. 
+ Output: bool, where True stands for the correct signature generation. False value means that an error has occurred. 
   
- The private key and the nonce are expected to be less than the curve order.
+ The private key and the nonce are expected to be more than 0 and less than the curve order.
 */
-uint64_t
+bool
 Hacl_P256_ecdsa_sign_p256_sha384(
   uint8_t *result,
   uint32_t mLen,
@@ -92,16 +104,18 @@ Hacl_P256_ecdsa_sign_p256_sha384(
 );
 
 /*
- Input: result buffer: uint8[64], 
+Hash the message with SHA2-512, then sign the resulting digest with the P256 signature function.
+
+Input: result buffer: uint8[64], 
  m buffer: uint8 [mLen], 
  priv(ate)Key: uint8[32], 
  k (nonce): uint32[32]. 
   
- Output: uint64, where 0 stands for the correct signature generation. All the other values mean that an error has occurred. 
+ Output: bool, where True stands for the correct signature generation. False value means that an error has occurred. 
   
- The private key and the nonce are expected to be less than the curve order.
+ The private key and the nonce are expected to be more than 0 and less than the curve order.
 */
-uint64_t
+bool
 Hacl_P256_ecdsa_sign_p256_sha512(
   uint8_t *result,
   uint32_t mLen,
@@ -111,18 +125,30 @@ Hacl_P256_ecdsa_sign_p256_sha512(
 );
 
 /*
- Input: result buffer: uint8[64], 
+P256 signature WITHOUT hashing first.
+
+This function is intended to receive a hash of the input. For convenience, we
+recommend using one of the hash-and-sign combined functions above.
+
+The argument `m` MUST be at least 32 bytes (i.e. `mLen >= 32`).
+
+NOTE: The equivalent functions in OpenSSL and Fiat-Crypto both accept inputs
+smaller than 32 bytes. These libraries left-pad the input with enough zeroes to
+reach the minimum 32 byte size. Clients who need behavior identical to OpenSSL
+need to perform the left-padding themselves.
+
+Input: result buffer: uint8[64], 
  m buffer: uint8 [mLen], 
  priv(ate)Key: uint8[32], 
  k (nonce): uint32[32]. 
   
- Output: uint64, where 0 stands for the correct signature generation. All the other values mean that an error has occurred. 
+ Output: bool, where True stands for the correct signature generation. False value means that an error has occurred. 
   
- The private key and the nonce are expected to be less than the curve order. 
+ The private key and the nonce are expected to be more than 0 and less than the curve order.
   
  The message m is expected to be hashed by a strong hash function, the lenght of the message is expected to be 32 bytes and more.
 */
-uint64_t
+bool
 Hacl_P256_ecdsa_sign_p256_without_hash(
   uint8_t *result,
   uint32_t mLen,
@@ -131,8 +157,19 @@ Hacl_P256_ecdsa_sign_p256_without_hash(
   uint8_t *k
 );
 
+
+/****************/
+/* Verification */
+/****************/
+
 /*
- This code is not side-channel resistant.
+  Verify a message signature. These functions internally validate the public key using validate_public_key.
+*/
+
+
+/*
+ The input of the function is considered to be public, 
+  thus this code is not secret independent with respect to the operations done over the input.
   
  Input: m buffer: uint8 [mLen], 
  pub(lic)Key: uint8[64], 
@@ -151,7 +188,8 @@ Hacl_P256_ecdsa_verif_p256_sha2(
 );
 
 /*
- This code is not side-channel resistant.
+  The input of the function is considered to be public, 
+  thus this code is not secret independent with respect to the operations done over the input.
   
  Input: m buffer: uint8 [mLen], 
  pub(lic)Key: uint8[64], 
@@ -170,7 +208,8 @@ Hacl_P256_ecdsa_verif_p256_sha384(
 );
 
 /*
- This code is not side-channel resistant.
+  The input of the function is considered to be public, 
+  thus this code is not secret independent with respect to the operations done over the input.
   
  Input: m buffer: uint8 [mLen], 
  pub(lic)Key: uint8[64], 
@@ -189,7 +228,8 @@ Hacl_P256_ecdsa_verif_p256_sha512(
 );
 
 /*
-This code is not side-channel resistant.
+ The input of the function is considered to be public, 
+  thus this code is not secret independent with respect to the operations done over the input.
   
  Input: m buffer: uint8 [mLen], 
  pub(lic)Key: uint8[64], 
@@ -209,10 +249,18 @@ Hacl_P256_ecdsa_verif_without_hash(
   uint8_t *s
 );
 
+
+/******************/
+/* Key validation */
+/******************/
+
+
 /*
- Public key verification function. 
+Validate a public key.
+
   
- This code is not side-channel resistant.
+  The input of the function is considered to be public, 
+  thus this code is not secret independent with respect to the operations done over the input.
   
  Input: pub(lic)Key: uint8[64]. 
   
@@ -224,16 +272,37 @@ Hacl_P256_ecdsa_verif_without_hash(
   
  The last extract is taken from : https://neilmadden.blog/2017/05/17/so-how-do-you-validate-nist-ecdh-public-keys/
 */
-bool Hacl_P256_verify_q(uint8_t *pubKey);
+bool Hacl_P256_validate_public_key(uint8_t *pubKey);
 
 /*
- There and further we introduce notions of compressed point and not compressed point. 
+Validate a private key, e.g. prior to signing.
+
+Input: scalar: uint8[32].
   
- We denote || as byte concatenation. 
-  
- A compressed point is a point representaion as follows: (0x2 + y % 2) || x.
-  
- A not Compressed point is a point representation as follows: 0x4 || x || y.
+ Output: bool, where true stands for the scalar to be more than 0 and less than order.
+*/
+bool Hacl_P256_validate_private_key(uint8_t *x);
+
+
+/*****************************************/
+/* Point representations and conversions */
+/*****************************************/
+
+/*
+  Elliptic curve points have 2 32-byte coordinates (x, y) and can be represented in 3 ways:
+
+  - "raw" form (64 bytes): the concatenation of the 2 coordinates, also known as "internal"
+  - "compressed" form (33 bytes): first the sign byte of y (either 0x02 or 0x03), followed by x
+  - "uncompressed" form (65 bytes): first a constant byte (always 0x04), followed by the "raw" form
+
+  For all of the conversation functions below, the input and output MUST NOT overlap.
+*/
+
+
+/*
+Convert 65-byte uncompressed to raw.
+
+The function errors out if the first byte is incorrect, or if the resulting point is invalid.
 
   
  
@@ -243,56 +312,83 @@ bool Hacl_P256_verify_q(uint8_t *pubKey);
  Output: bool, where true stands for the correct decompression.
  
 */
-bool Hacl_P256_decompression_not_compressed_form(uint8_t *b, uint8_t *result);
+bool Hacl_P256_uncompressed_to_raw(uint8_t *b, uint8_t *result);
 
 /*
- Input: a point in compressed form (uint8[33]), 
+Convert 33-byte compressed to raw.
+
+The function errors out if the first byte is incorrect, or if the resulting point is invalid.
+
+Input: a point in compressed form (uint8[33]), 
  result: uint8[64] (internal point representation).
   
  Output: bool, where true stands for the correct decompression.
  
 */
-bool Hacl_P256_decompression_compressed_form(uint8_t *b, uint8_t *result);
+bool Hacl_P256_compressed_to_raw(uint8_t *b, uint8_t *result);
 
 /*
- Input: a point buffer (internal representation: uint8[64]), 
+Convert raw to 65-byte uncompressed.
+
+This function effectively prepends a 0x04 byte.
+
+Input: a point buffer (internal representation: uint8[64]), 
  result: a point in not compressed form (uint8[65]).
 */
-void Hacl_P256_compression_not_compressed_form(uint8_t *b, uint8_t *result);
+void Hacl_P256_raw_to_uncompressed(uint8_t *b, uint8_t *result);
 
 /*
- Input: a point buffer (internal representation: uint8[64]), 
- result: a point in not compressed form (uint8[33]).
+Convert raw to 33-byte compressed.
+
+  Input: `b`, the pointer buffer in internal representation, of type `uint8[64]`
+  Output: `result`, a point in compressed form, of type `uint8[33]`
+
 */
-void Hacl_P256_compression_compressed_form(uint8_t *b, uint8_t *result);
+void Hacl_P256_raw_to_compressed(uint8_t *b, uint8_t *result);
+
+
+/******************/
+/* ECDH agreement */
+/******************/
 
 /*
- The function takes an arbitraty 32 bytes buffer and reduces it to contain a value that is less than the curve order.
-  
- Input: x: uint8[32], 
- result: uint8[32], such that by the end of the function the value stored in the buffer result equal to the value stored in the buffer x modulo curveOrder.
+Convert a private key into a raw public key.
+
+This function performs no key validation.
+
+  Input: `scalar`, the private key, of type `uint8[32]`.
+  Output: `result`, the public key, of type `uint8[64]`.
+  Returns:
+  - `true`, for success, meaning the public key is not a point at infinity
+  - `false`, otherwise.
+
+  `scalar` and `result` MUST NOT overlap.
 */
-void Hacl_P256_reduction_8_32(uint8_t *x, uint8_t *result);
+bool Hacl_P256_dh_initiator(uint8_t *result, uint8_t *scalar);
 
 /*
- Input: result: uint8[64], 
- scalar: uint8[32].
-  
- Output: uint64, where 0 stands for the correct key generation. All the other values mean that an error has occurred. 
-  
-*/
-uint64_t Hacl_P256_ecp256dh_i(uint8_t *result, uint8_t *scalar);
+ECDH key agreement.
 
-/*
- This code is not side channel resistant on pub_key. 
+This function takes a 32-byte secret key, another party's 64-byte raw public
+key, and computeds the 64-byte ECDH shared key.
+
+This function ONLY validates the public key.
+
+   The pub(lic)_key input of the function is considered to be public, 
+  thus this code is not secret independent with respect to the operations done over this variable.
+  
  Input: result: uint8[64], 
  pub(lic)Key: uint8[64], 
- scalar: uint8[64].
+ scalar: uint8[32].
   
- Output: uint64, where 0 stands for the correct key generation. All the other values mean that an error has occurred. 
+ Output: bool, where True stands for the correct key generation. False value means that an error has occurred (possibly the provided public key was incorrect or the result represents point at infinity). 
   
 */
-uint64_t Hacl_P256_ecp256dh_r(uint8_t *result, uint8_t *pubKey, uint8_t *scalar);
+bool Hacl_P256_dh_responder(uint8_t *result, uint8_t *pubKey, uint8_t *scalar);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #define __Hacl_P256_H_DEFINED
 #endif

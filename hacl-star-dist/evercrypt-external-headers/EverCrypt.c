@@ -24,19 +24,21 @@
 
 #include "EverCrypt.h"
 
+
+
 typedef struct EverCrypt_aes128_key_s_s
 {
   EverCrypt_aes128_key_s_tags tag;
   union {
     FStar_Dyn_dyn case_AES128_OPENSSL;
     FStar_Dyn_dyn case_AES128_BCRYPT;
-    struct 
+    struct
     {
       uint8_t *w;
       uint8_t *sbox;
     }
     case_AES128_VALE;
-    struct 
+    struct
     {
       uint8_t *w;
       uint8_t *sbox;
@@ -75,7 +77,7 @@ typedef struct EverCrypt_aes256_key_s_s
   union {
     FStar_Dyn_dyn case_AES256_OPENSSL;
     FStar_Dyn_dyn case_AES256_BCRYPT;
-    struct 
+    struct
     {
       uint8_t *w;
       uint8_t *sbox;
@@ -142,12 +144,4 @@ typedef struct EverCrypt_AEAD_state_s_s
   uint8_t *ek;
 }
 EverCrypt_AEAD_state_s;
-
-typedef struct Hacl_Streaming_Functor_state_s___EverCrypt_Hash_state_s_____s
-{
-  EverCrypt_Hash_state_s *block_state;
-  uint8_t *buf;
-  uint64_t total_len;
-}
-Hacl_Streaming_Functor_state_s___EverCrypt_Hash_state_s____;
 

@@ -21,6 +21,14 @@
  * SOFTWARE.
  */
 
+
+#ifndef __Hacl_HMAC_H
+#define __Hacl_HMAC_H
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "evercrypt_targetconfig.h"
 #include "libintvector.h"
 #include "kremlin/internal/types.h"
@@ -28,12 +36,11 @@
 #include <string.h>
 #include "kremlin/internal/target.h"
 
-#ifndef __Hacl_HMAC_H
-#define __Hacl_HMAC_H
 
 #include "Hacl_Kremlib.h"
-#include "Hacl_Hash.h"
-
+#include "Hacl_Impl_Blake2_Constants.h"
+#include "Hacl_Hash_SHA2.h"
+#include "Hacl_Hash_SHA1.h"
 
 void
 Hacl_HMAC_legacy_compute_sha1(
@@ -70,6 +77,28 @@ Hacl_HMAC_compute_sha2_512(
   uint8_t *data,
   uint32_t data_len
 );
+
+void
+Hacl_HMAC_compute_blake2s_32(
+  uint8_t *dst,
+  uint8_t *key,
+  uint32_t key_len,
+  uint8_t *data,
+  uint32_t data_len
+);
+
+void
+Hacl_HMAC_compute_blake2b_32(
+  uint8_t *dst,
+  uint8_t *key,
+  uint32_t key_len,
+  uint8_t *data,
+  uint32_t data_len
+);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #define __Hacl_HMAC_H_DEFINED
 #endif

@@ -24,10 +24,12 @@
 
 #include "EverCrypt_Poly1305.h"
 
+#include "internal/Vale.h"
+
 static void poly1305_vale(uint8_t *dst, uint8_t *src, uint32_t len, uint8_t *key)
 {
   uint8_t ctx[192U] = { 0U };
-  memcpy(ctx + (uint32_t)24U, key, (uint32_t)32U * sizeof (key[0U]));
+  memcpy(ctx + (uint32_t)24U, key, (uint32_t)32U * sizeof (uint8_t));
   uint32_t n_blocks = len / (uint32_t)16U;
   uint32_t n_extra = len % (uint32_t)16U;
   uint8_t tmp[16U];
@@ -44,34 +46,36 @@ static void poly1305_vale(uint8_t *dst, uint8_t *src, uint32_t len, uint8_t *key
     }
     uint32_t len16 = n_blocks * (uint32_t)16U;
     uint8_t *src16 = src;
-    memcpy(tmp, src + len16, n_extra * sizeof (src[0U]));
+    memcpy(tmp, src + len16, n_extra * sizeof (uint8_t));
     uint64_t scrut = x64_poly1305(ctx, src16, (uint64_t)len16, (uint64_t)0U);
-    memcpy(ctx + (uint32_t)24U, key, (uint32_t)32U * sizeof (key[0U]));
+    memcpy(ctx + (uint32_t)24U, key, (uint32_t)32U * sizeof (uint8_t));
     uint64_t scrut0 = x64_poly1305(ctx, tmp, (uint64_t)n_extra, (uint64_t)1U);
   }
-  memcpy(dst, ctx, (uint32_t)16U * sizeof (ctx[0U]));
+  memcpy(dst, ctx, (uint32_t)16U * sizeof (uint8_t));
 }
 
 void EverCrypt_Poly1305_poly1305(uint8_t *dst, uint8_t *src, uint32_t len, uint8_t *key)
 {
   bool avx2 = EverCrypt_AutoConfig2_has_avx2();
   bool avx = EverCrypt_AutoConfig2_has_avx();
+  bool vec256 = EverCrypt_AutoConfig2_has_vec256();
+  bool vec128 = EverCrypt_AutoConfig2_has_vec128();
   bool vale = EverCrypt_AutoConfig2_wants_vale();
-  #if EVERCRYPT_TARGETCONFIG_X64
-  if (avx2)
+  #if HACL_CAN_COMPILE_VEC256
+  if (vec256)
   {
     Hacl_Poly1305_256_poly1305_mac(dst, len, src, key);
     return;
   }
   #endif
-  #if EVERCRYPT_TARGETCONFIG_X64
-  if (avx)
+  #if HACL_CAN_COMPILE_VEC128
+  if (vec128)
   {
     Hacl_Poly1305_128_poly1305_mac(dst, len, src, key);
     return;
   }
   #endif
-  #if EVERCRYPT_TARGETCONFIG_X64
+  #if HACL_CAN_COMPILE_VALE
   if (vale)
   {
     poly1305_vale(dst, src, len, key);

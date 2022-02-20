@@ -21,6 +21,14 @@
  * SOFTWARE.
  */
 
+
+#ifndef __Hacl_Poly1305_128_H
+#define __Hacl_Poly1305_128_H
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
+
 #include "evercrypt_targetconfig.h"
 #include "libintvector.h"
 #include "kremlin/internal/types.h"
@@ -28,20 +36,8 @@
 #include <string.h>
 #include "kremlin/internal/target.h"
 
-#ifndef __Hacl_Poly1305_128_H
-#define __Hacl_Poly1305_128_H
 
 #include "Hacl_Kremlib.h"
-
-
-void
-Hacl_Impl_Poly1305_Field32xN_128_load_acc2(Lib_IntVector_Intrinsics_vec128 *acc, uint8_t *b);
-
-void
-Hacl_Impl_Poly1305_Field32xN_128_fmul_r2_normalize(
-  Lib_IntVector_Intrinsics_vec128 *out,
-  Lib_IntVector_Intrinsics_vec128 *p
-);
 
 extern uint32_t Hacl_Poly1305_128_blocklen;
 
@@ -66,6 +62,10 @@ Hacl_Poly1305_128_poly1305_finish(
 );
 
 void Hacl_Poly1305_128_poly1305_mac(uint8_t *tag, uint32_t len, uint8_t *text, uint8_t *key);
+
+#if defined(__cplusplus)
+}
+#endif
 
 #define __Hacl_Poly1305_128_H_DEFINED
 #endif

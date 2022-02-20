@@ -24,6 +24,8 @@
 
 #include "Hacl_NaCl.h"
 
+#include "internal/Hacl_Kremlib.h"
+
 static void secretbox_init(uint8_t *xkeys, uint8_t *k, uint8_t *n)
 {
   uint8_t *subkey = xkeys;
@@ -56,7 +58,7 @@ secretbox_detached(uint32_t mlen, uint8_t *c, uint8_t *tag, uint8_t *k, uint8_t 
   uint8_t *m0 = m;
   uint8_t *m1 = m + mlen0;
   uint8_t block0[32U] = { 0U };
-  memcpy(block0, m0, mlen0 * sizeof (m0[0U]));
+  memcpy(block0, m0, mlen0 * sizeof (uint8_t));
   for (uint32_t i = (uint32_t)0U; i < (uint32_t)32U; i++)
   {
     uint8_t *os = block0;
@@ -65,7 +67,7 @@ secretbox_detached(uint32_t mlen, uint8_t *c, uint8_t *tag, uint8_t *k, uint8_t 
   }
   uint8_t *c0 = c;
   uint8_t *c1 = c + mlen0;
-  memcpy(c0, block0, mlen0 * sizeof (block0[0U]));
+  memcpy(c0, block0, mlen0 * sizeof (uint8_t));
   Hacl_Salsa20_salsa20_encrypt(mlen1, c1, m1, subkey, n1, (uint32_t)1U);
   Hacl_Poly1305_32_poly1305_mac(tag, mlen, c, mkey);
 }
@@ -110,7 +112,7 @@ secretbox_open_detached(
     uint8_t *c0 = c;
     uint8_t *c1 = c + mlen0;
     uint8_t block0[32U] = { 0U };
-    memcpy(block0, c0, mlen0 * sizeof (c0[0U]));
+    memcpy(block0, c0, mlen0 * sizeof (uint8_t));
     for (uint32_t i = (uint32_t)0U; i < (uint32_t)32U; i++)
     {
       uint8_t *os = block0;
@@ -119,7 +121,7 @@ secretbox_open_detached(
     }
     uint8_t *m0 = m;
     uint8_t *m1 = m + mlen0;
-    memcpy(m0, block0, mlen0 * sizeof (block0[0U]));
+    memcpy(m0, block0, mlen0 * sizeof (uint8_t));
     Hacl_Salsa20_salsa20_decrypt(mlen1, m1, c1, subkey, n1, (uint32_t)1U);
     return (uint32_t)0U;
   }

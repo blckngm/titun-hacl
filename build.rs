@@ -59,9 +59,6 @@ static i686_msvc_asm_sources: &[&str] = &[
 
 static adx_bmi2_c_sources: &[&str] = &["Hacl_Curve25519_64.c"];
 
-// Don't use explicit_bzero on linux.
-static non_linux_c_sources: &[&str] = &["Lib_Memzero0.c"];
-
 static c_sources: &[&str] = &[
     // "EverCrypt_AEAD.c",
     // "EverCrypt_AutoConfig2.c",
@@ -126,9 +123,7 @@ fn main() {
     let arch = std::env::var("CARGO_CFG_TARGET_ARCH").unwrap();
     let env = std::env::var("CARGO_CFG_TARGET_ENV").unwrap();
     let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
-    let target_pointer_width = std::env::var("CARGO_CFG_TARGET_POINTER_WIDTH").unwrap();
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
-    let opt_level = std::env::var("OPT_LEVEL").unwrap();
 
     let distro = if env == "msvc" {
         "hacl-star-dist/msvc-compatible"
@@ -173,62 +168,44 @@ fn main() {
 
     // Generate config.h
     let mut config_h = std::fs::File::create(Path::new(&out_dir).join("config.h")).unwrap();
+    let mut config_h_define = |k: &str, v: &str| writeln!(config_h, "#define {} {}", k, v).unwrap();
     if arch == "aarch64" {
-        config_h.write_all(b"#define IS_ARM_8 1\n").unwrap();
+        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_ARM8");
     } else if arch == "arm" {
-        config_h.write_all(b"#define IS_ARM_7 1\n").unwrap();
+        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_ARM7");
+    } else if arch == "x86_64" {
+        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_X64");
+    } else if arch == "i686" {
+        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_X86");
     }
-    if arch != "x86_64" {
-        // I think this disables _addcarry_u64.
-        config_h
-            .write_all(b"#define BROKEN_INTRINSICS 1\n")
-            .unwrap();
-        config_h.write_all(b"#define IS_NOT_X64 1\n").unwrap();
+    if arch == "x86_64" || arch == "i686" {
+        config_h_define("HACL_CAN_COMPILE_INTRINSICS", "1");
     }
-    if arch == "x86" && env == "msvc" {
-        config_h.write_all(b"#include <malloc.h>\n").unwrap();
+    if arch == "x86_64" {
+        config_h_define("HACL_CAN_COMPILE_VALE", "1");
+        if env != "msvc" {
+            config_h_define("HACL_CAN_COMPILE_INLINE_ASM", "1");
+        }
+    }
+    if build_vec256 {
+        config_h_define("HACL_CAN_COMPILE_INLINE_VEC256", "1");
+    }
+    if build_vec128 {
+        config_h_define("HACL_CAN_COMPILE_INLINE_VEC128", "1");
     }
     config_h.flush().unwrap();
     drop(config_h);
-    // Generate a fake x86intrin.h for MSVC.
-    if env == "msvc" {
-        let mut x86intrin_h =
-            std::fs::File::create(Path::new(&out_dir).join("x86intrin.h")).unwrap();
-        x86intrin_h.write_all(b"#include <immintrin.h>").unwrap();
-    }
 
     let build_common = {
         let mut build = cc::Build::new();
         build.flag_if_supported("-std=gnu11");
         build.flag_if_supported("-fwrapv");
-        if os != "windows" {
-            build.define("_BSD_SOURCE", None);
-            build.define("_DEFAULT_SOURCE", None);
-        } else if env == "gnu" {
-            build.flag_if_supported("-fno-asynchronous-unwind-tables");
-        }
+        build.define("_BSD_SOURCE", None);
+        build.define("_DEFAULT_SOURCE", None);
         build.flag_if_supported("-mtune=skylake");
         build.warnings(false);
         build.extra_warnings(false);
         build.include(out_dir);
-        if target_pointer_width != "64" {
-            build.define("KRML_VERIFIED_UINT128", None);
-        }
-        match &*arch {
-            "x86_64" => {}
-            "aarch64" | "arm" => {
-                build.define("Lib_IntVector_Intrinsics_vec256", "void *");
-            }
-            _ => {
-                build.define("Lib_IntVector_Intrinsics_vec256", "void *");
-                build.define("Lib_IntVector_Intrinsics_vec128", "void *");
-            }
-        }
-        if arch == "arm" {
-            // libintvector.h is including arm_nean.h unconditionally. Need this
-            // for it to compile at all.
-            build.flag_if_supported("-mfpu=neon");
-        }
         build.include(distro);
         build.include("hacl-star-dist/kremlin/include");
         build.include("hacl-star-dist/kremlin/kremlib/dist/minimal/");
@@ -240,7 +217,6 @@ fn main() {
             .clone()
             .flag_if_supported("/arch:AVX2")
             .flag_if_supported("-mavx2")
-            .flag_if_supported("-mtune=skylake")
             .files(map_sources(distro, vec256_sources))
             .compile("evercrypt_vec256");
     }
@@ -251,13 +227,6 @@ fn main() {
             .flag_if_supported("-mtune=silvermont")
             .flag_if_supported("-msse4.2")
             .flag_if_supported("-march=armv8-a+simd");
-
-        if arch == "aarch64" && opt_level == "0" {
-            // Use at least O1, otherwise blake2s won't build on aarch64,
-            // because the compiler can't deduce that the arguments we pass to
-            // vsriq_n_u32 are actually constants.
-            build.opt_level(1);
-        }
 
         build
             .files(map_sources(distro, vec128_sources))
@@ -285,8 +254,5 @@ fn main() {
     #[allow(clippy::redundant_clone)]
     let mut build = build_common.clone();
     build.files(map_sources(distro, c_sources));
-    if os != "linux" {
-        build.files(map_sources(distro, non_linux_c_sources));
-    }
     build.compile("evercrypt");
 }
