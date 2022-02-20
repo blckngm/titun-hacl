@@ -188,10 +188,10 @@ fn main() {
         }
     }
     if build_vec256 {
-        config_h_define("HACL_CAN_COMPILE_INLINE_VEC256", "1");
+        config_h_define("HACL_CAN_COMPILE_VEC256", "1");
     }
     if build_vec128 {
-        config_h_define("HACL_CAN_COMPILE_INLINE_VEC128", "1");
+        config_h_define("HACL_CAN_COMPILE_VEC128", "1");
     }
     config_h.flush().unwrap();
     drop(config_h);
