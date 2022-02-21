@@ -125,11 +125,7 @@ fn main() {
     let os = std::env::var("CARGO_CFG_TARGET_OS").unwrap();
     let out_dir = std::env::var_os("OUT_DIR").unwrap();
 
-    let distro = if env == "msvc" {
-        "hacl-star-dist/msvc-compatible"
-    } else {
-        "hacl-star-dist/gcc-compatible"
-    };
+    let distro = "hacl-star-dist/msvc-compatible";
 
     fn map_sources(
         distro: &'static str,
@@ -169,15 +165,6 @@ fn main() {
     // Generate config.h
     let mut config_h = std::fs::File::create(Path::new(&out_dir).join("config.h")).unwrap();
     let mut config_h_define = |k: &str, v: &str| writeln!(config_h, "#define {} {}", k, v).unwrap();
-    if arch == "aarch64" {
-        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_ARM8");
-    } else if arch == "arm" {
-        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_ARM7");
-    } else if arch == "x86_64" {
-        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_X64");
-    } else if arch == "i686" {
-        config_h_define("TARGET_ARCHITECTURE", "TARGET_ARCHITECTURE_ID_X86");
-    }
     if arch == "x86_64" || arch == "i686" {
         config_h_define("HACL_CAN_COMPILE_INTRINSICS", "1");
     }
